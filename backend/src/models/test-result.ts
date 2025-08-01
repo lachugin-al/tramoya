@@ -64,11 +64,14 @@ export interface StepResult {
  */
 export interface TestResult {
   id: string;
+  runId?: string; // Optional runId for tracking test execution
   testId: string;
   status: TestStatus;
   startTime: Date;
   endTime?: Date;
   stepResults: StepResult[];
+  videoUrl?: string; // URL to video recording
+  traceUrl?: string; // URL to trace file
   summary?: {
     totalSteps: number;
     passedSteps: number;

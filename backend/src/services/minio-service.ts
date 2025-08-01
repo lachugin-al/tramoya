@@ -133,7 +133,9 @@ export class MinioService {
    */
   public getPublicUrl(objectName: string): string {
     // Return URL that goes through the frontend nginx proxy
-    return `/storage/${this.bucket}/${objectName}`;
+    // The nginx proxy is configured to forward /storage/ to http://minio:9000/tramoya/
+    // So we should not include the bucket name in the URL
+    return `/storage/${objectName}`;
   }
 
   /**

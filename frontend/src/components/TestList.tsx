@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import apiService from '../services/api';
 import { TestScenario } from '../types';
@@ -8,9 +8,6 @@ const TestList: React.FC = () => {
   const [tests, setTests] = useState<TestScenario[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [executingTests, setExecutingTests] = useState<Record<string, boolean>>({});
-  
-  const navigate = useNavigate();
 
   // Fetch tests on component mount
   useEffect(() => {
@@ -33,22 +30,6 @@ const TestList: React.FC = () => {
     }
   };
 
-  // Execute a test
-  const executeTest = async (id: string) => {
-    try {
-      setExecutingTests(prev => ({ ...prev, [id]: true }));
-      const { resultId } = await apiService.executeTest(id);
-      toast.success('Test execution started');
-      
-      // Navigate to the results page
-      navigate(`/results/${resultId}`);
-    } catch (err) {
-      console.error('Error executing test:', err);
-      toast.error('Failed to execute test');
-    } finally {
-      setExecutingTests(prev => ({ ...prev, [id]: false }));
-    }
-  };
 
   // Delete a test
   const deleteTest = async (id: string) => {
@@ -125,13 +106,6 @@ const TestList: React.FC = () => {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button
-                  onClick={() => executeTest(test.id)}
-                  disabled={executingTests[test.id]}
-                  className="button"
-                >
-                  {executingTests[test.id] ? 'Executing...' : 'Run Test'}
-                </button>
                 <Link to={`/edit/${test.id}`} className="button bg-secondary">
                   Edit
                 </Link>

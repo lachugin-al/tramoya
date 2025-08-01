@@ -6,7 +6,6 @@ import 'react-toastify/dist/ReactToastify.css';
 // Import pages (to be created)
 const TestList = React.lazy(() => import('./components/TestList'));
 const TestBuilder = React.lazy(() => import('./components/TestBuilder'));
-const TestResults = React.lazy(() => import('./components/TestResults'));
 
 const App: React.FC = () => {
   return (
@@ -33,13 +32,12 @@ const App: React.FC = () => {
         </div>
       </header>
 
-      <main className="container py-6">
+      <main className="container">
         <React.Suspense fallback={<div>Loading...</div>}>
           <Routes>
             <Route path="/" element={<TestList />} />
             <Route path="/create" element={<TestBuilder />} />
             <Route path="/edit/:id" element={<TestBuilder />} />
-            <Route path="/results/:id" element={<TestResults />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </React.Suspense>

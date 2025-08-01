@@ -185,6 +185,8 @@ export interface TestResult {
   startTime: string;
   endTime?: string;
   stepResults: StepResult[];
+  videoUrl?: string; // URL to video recording
+  traceUrl?: string; // URL to trace file
   summary?: {
     totalSteps: number;
     passedSteps: number;

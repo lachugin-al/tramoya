@@ -1,5 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { TestStatus, TestResult, Screenshot } from '../../../types';
+import { debugLog, verifyImageUrl } from '../../../utils/debug';
+import DebugPanel from './DebugPanel';
 
 interface PreviewPanelProps {
   testStatus: TestStatus;
@@ -39,27 +41,94 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   currentStepIndex = 0,
   onStepChange
 }) => {
+  PreviewPanel.displayName = 'PreviewPanel';
+  // const normalizedStatus = testStatus?.toLowerCase() as TestStatus;
+  // const status = statusConfig[testStatus];
+
   const status = statusConfig[testStatus];
   const [screenshotIndex, setScreenshotIndex] = useState(0);
+  const [showDebug, setShowDebug] = useState(false);
   
   // Get screenshots for the current step
   const currentStepScreenshots: Screenshot[] = React.useMemo(() => {
-    if (!testResult || !testResult.stepResults || testResult.stepResults.length === 0) {
+    debugLog('PreviewPanel', `Calculating screenshots for step ${currentStepIndex}`);
+    
+    if (!testResult) {
+      debugLog('PreviewPanel', 'No test result available');
+      return [];
+    }
+    
+    debugLog('PreviewPanel', 'Test result available', {
+      id: testResult.id,
+      status: testResult.status,
+      stepResultsCount: testResult.stepResults?.length || 0
+    });
+    
+    if (!testResult.stepResults || testResult.stepResults.length === 0) {
+      debugLog('PreviewPanel', 'No step results available in test result');
       return [];
     }
     
     // If currentStepIndex is out of bounds, return empty array
     if (currentStepIndex >= testResult.stepResults.length) {
+      debugLog('PreviewPanel', `Current step index out of bounds: ${currentStepIndex} >= ${testResult.stepResults.length}`);
       return [];
     }
     
-    return testResult.stepResults[currentStepIndex].screenshots || [];
+    const stepResult = testResult.stepResults[currentStepIndex];
+    debugLog('PreviewPanel', `Step result for index ${currentStepIndex}`, {
+      stepId: stepResult.stepId,
+      status: stepResult.status,
+      screenshotsCount: stepResult.screenshots?.length || 0
+    });
+    
+    const screenshots = stepResult.screenshots || [];
+    
+    if (screenshots.length > 0) {
+      debugLog('PreviewPanel', `Found ${screenshots.length} screenshots for step ${currentStepIndex}`);
+      debugLog('PreviewPanel', 'Screenshot details', screenshots.map(s => ({
+        id: s.id,
+        url: s.url,
+        path: s.path
+      })));
+    } else {
+      debugLog('PreviewPanel', `No screenshots found for step ${currentStepIndex}`);
+    }
+    
+    return screenshots;
   }, [testResult, currentStepIndex]);
   
   // Reset screenshot index when step changes
   React.useEffect(() => {
+    debugLog('PreviewPanel', `Step changed to ${currentStepIndex}, resetting screenshot index to 0`);
     setScreenshotIndex(0);
   }, [currentStepIndex]);
+  
+  // Proactively verify image URLs when screenshots change
+  React.useEffect(() => {
+    if (currentStepScreenshots.length > 0 && currentStepScreenshots[screenshotIndex]?.url) {
+      debugLog('PreviewPanel', `Proactively verifying screenshot image at index ${screenshotIndex}`);
+      verifyImageUrl('PreviewPanel-Proactive', currentStepScreenshots[screenshotIndex].url, {
+        stepId: currentStepScreenshots[screenshotIndex].stepId,
+        screenshotId: currentStepScreenshots[screenshotIndex].id,
+        screenshotIndex,
+        currentStepIndex,
+        totalScreenshots: currentStepScreenshots.length
+      });
+    }
+  }, [currentStepScreenshots, screenshotIndex]);
+  
+  // Log when component props change
+  useEffect(() => {
+    debugLog('PreviewPanel', 'Component props updated', {
+      testStatus,
+      selectedBrowser,
+      currentUrl,
+      currentStepIndex,
+      testResultAvailable: !!testResult,
+      screenshotsAvailable: currentStepScreenshots.length > 0
+    });
+  }, [testStatus, selectedBrowser, currentUrl, testResult, currentStepIndex, currentStepScreenshots.length]);
   
   // Handle navigation between screenshots
   const handlePrevScreenshot = () => {
@@ -118,10 +187,26 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
               Pause
             </button>
           ) : (
-            <button onClick={onRunTest} className="control-button run-button">
-              <span className="control-icon">▶</span>
-              Run
-            </button>
+            <>
+              <button onClick={onRunTest} className="control-button run-button">
+                <span className="control-icon">▶</span>
+                Run
+              </button>
+              
+              {/* Show Trace Viewer button after test completion */}
+              {(testStatus === TestStatus.PASSED || testStatus === TestStatus.FAILED) && 
+               testResult && testResult.traceUrl && (
+                <a 
+                  href={`https://trace.playwright.dev/?trace=${testResult.traceUrl}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="control-button trace-button"
+                >
+                  <span className="control-icon">🔍</span>
+                  Open Trace Viewer
+                </a>
+              )}
+            </>
           )}
           
         </div>
@@ -139,21 +224,73 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
               <div className="browser-url-bar">
                 {currentUrl || 'about:blank'}
               </div>
+              <button 
+                onClick={() => setShowDebug(!showDebug)} 
+                style={{
+                  marginLeft: '8px',
+                  padding: '2px 6px',
+                  fontSize: '10px',
+                  background: showDebug ? '#dc2626' : '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer'
+                }}
+              >
+                {showDebug ? 'Hide Debug' : 'Debug'}
+              </button>
             </div>
           </div>
           
           <div className="browser-viewport">
+            {/* Log rendering browser viewport */}
+            {(() => { console.log('PreviewPanel: Rendering browser viewport, test status:', testStatus, 'screenshots:', currentStepScreenshots.length); return null; })()}
             {testStatus === TestStatus.RUNNING && !currentStepScreenshots.length ? (
               <div className="loading-state">
+                {/* Log showing loading state */}
+                {(() => { console.log('PreviewPanel: Showing loading state'); return null; })()}
                 <div className="loading-spinner"></div>
                 <p>Test is running...</p>
               </div>
             ) : currentStepScreenshots.length > 0 ? (
               <div className="screenshot-container">
+                {/* Log showing screenshot */}
+                {(() => { console.log('PreviewPanel: Showing screenshot at index', screenshotIndex, 'URL:', currentStepScreenshots[screenshotIndex].url); return null; })()}
                 <img 
                   src={currentStepScreenshots[screenshotIndex].url} 
                   alt={`Screenshot ${screenshotIndex + 1} of step ${currentStepIndex + 1}`}
                   className="screenshot-image"
+                  onLoad={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    console.log('PreviewPanel: Screenshot image loaded successfully', {
+                      url: currentStepScreenshots[screenshotIndex].url,
+                      naturalWidth: img.naturalWidth,
+                      naturalHeight: img.naturalHeight,
+                      currentSrc: img.currentSrc,
+                      complete: img.complete,
+                      timestamp: new Date().toISOString()
+                    });
+                  }}
+                  onError={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    console.error('PreviewPanel: Error loading screenshot image:', {
+                      url: currentStepScreenshots[screenshotIndex].url,
+                      error: e,
+                      currentSrc: img.currentSrc,
+                      timestamp: new Date().toISOString()
+                    });
+                    
+                    // Verify the image URL using our utility function
+                    if (currentStepScreenshots[screenshotIndex].url) {
+                      verifyImageUrl('PreviewPanel', currentStepScreenshots[screenshotIndex].url, {
+                        stepId: currentStepScreenshots[screenshotIndex].stepId,
+                        screenshotId: currentStepScreenshots[screenshotIndex].id,
+                        screenshotIndex,
+                        currentStepIndex,
+                        errorEvent: 'onError'
+                      });
+                    }
+                  }}
                 />
                 
                 {/* Screenshot navigation */}
@@ -215,6 +352,24 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
         </div>
       </div>
 
+      {/* Debug panels */}
+      <DebugPanel 
+        title="Test Result" 
+        data={testResult} 
+        show={showDebug} 
+      />
+      
+      <DebugPanel 
+        title="Current Step Screenshots" 
+        data={{
+          currentStepIndex,
+          screenshotIndex,
+          screenshots: currentStepScreenshots,
+          currentScreenshot: currentStepScreenshots[screenshotIndex]
+        }} 
+        show={showDebug} 
+      />
+      
       <style>
         {`
           .preview-header-left {
@@ -292,6 +447,21 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           
           .pause-button:hover {
             background: #d97706;
+          }
+          
+          .trace-button {
+            background: #4f46e5;
+            color: white;
+            border-color: #4f46e5;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-left: 8px;
+          }
+          
+          .trace-button:hover {
+            background: #4338ca;
           }
           
           .reset-button:hover {

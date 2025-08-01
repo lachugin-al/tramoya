@@ -85,13 +85,8 @@ const TestResults: React.FC = () => {
         }
       }
       
-      // Set up polling for pending or running tests
-      if (data.status === TestStatus.PENDING || data.status === TestStatus.RUNNING) {
-        if (!pollingInterval) {
-          const interval = setInterval(() => fetchResult(resultId), 2000);
-          setPollingInterval(interval);
-        }
-      } else if (pollingInterval) {
+      // No longer polling for test results
+      if (pollingInterval) {
         clearInterval(pollingInterval);
         setPollingInterval(null);
       }

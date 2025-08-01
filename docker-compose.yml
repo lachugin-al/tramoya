@@ -8,12 +8,12 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - backend
+      - gateway
     networks:
       - tramoya-network
     restart: unless-stopped
 
-  backend:
+  gateway:
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -28,8 +28,43 @@ services:
       - MINIO_SECRET_KEY=minioadmin
       - MINIO_BUCKET=tramoya
       - MINIO_USE_SSL=false
+      - REDIS_URL=redis://redis:6379
+      - SERVICE_TYPE=gateway
     depends_on:
       - minio
+      - redis
+    networks:
+      - tramoya-network
+    restart: unless-stopped
+
+  runner:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - NODE_ENV=production
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=minioadmin
+      - MINIO_SECRET_KEY=minioadmin
+      - MINIO_BUCKET=tramoya
+      - MINIO_USE_SSL=false
+      - REDIS_URL=redis://redis:6379
+      - SERVICE_TYPE=runner
+    depends_on:
+      - minio
+      - redis
+    networks:
+      - tramoya-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
     networks:
       - tramoya-network
     restart: unless-stopped
@@ -72,4 +107,6 @@ networks:
 
 volumes:
   minio-data:
+    driver: local
+  redis-data:
     driver: local
