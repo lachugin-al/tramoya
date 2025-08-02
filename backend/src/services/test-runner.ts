@@ -520,10 +520,8 @@ export class TestRunner {
             // Upload to Minio
             const objectName = `screenshots/${filename}`;
             await this.minioService.uploadFile(filepath, objectName);
-
-            // Get URL for frontend
-            //const url = await this.minioService.getPresignedUrl(objectName);
-            // Get public URL for frontend (instead of presigned URL)
+            
+            // Get public URL for frontend
             const url = this.minioService.getPublicUrl(objectName);
 
             // Add to step result
@@ -577,34 +575,16 @@ export class TestRunner {
         status: StepStatus,
         screenshotUrl?: string
     ): Promise<void> {
-        if (!this.redisService) {
-            logger.debug('Redis service not available, skipping event emission');
-            return;
-        }
+        const event = {
+            type: TestEventType.STEP,
+            runId,
+            stepId,
+            status,
+            url: screenshotUrl,
+            ts: Date.now(),
+        };
 
-        try {
-            const event = {
-                type: TestEventType.STEP,
-                runId,
-                stepId,
-                status,
-                url: screenshotUrl,
-                ts: Date.now(),
-            };
-
-            // Log the event type to ensure it's correct
-            logger.debug(`Step event type: ${TestEventType.STEP}`);
-            const eventJson = JSON.stringify(event);
-
-            logger.info(`Publishing STEP event to Redis: runId: ${runId}, stepId: ${stepId}, status: ${status}, channel: test-events`);
-            logger.debug(`Step event data: ${eventJson}`);
-
-            await this.redisService.publish('test-events', eventJson);
-
-            logger.info(`Successfully published STEP event for step: ${stepId}, status: ${status}, runId: ${runId}`);
-        } catch (error) {
-            logger.error(`Error publishing step event: ${error instanceof Error ? error.message : String(error)}`);
-        }
+        await this.emitEvent(event);
     }
 
     /**
@@ -620,35 +600,24 @@ export class TestRunner {
         video?: string,
         trace?: string
     ): Promise<void> {
-        if (!this.redisService) {
-            logger.debug('Redis service not available, skipping event emission');
-            return;
-        }
+        const event = {
+            type: TestEventType.RUN_FINISHED,
+            runId,
+            status,
+            video,
+            trace,
+            ts: Date.now(),
+        };
 
-        try {
-            const event = {
-                type: TestEventType.RUN_FINISHED,
-                runId,
-                status,
-                video,
-                trace,
-                ts: Date.now(),
-            };
+        await this.emitEvent(event);
 
-            // Publish to Redis
-            await this.redisService.publish(
-                'test-events',
-                JSON.stringify(event),
-            );
-            logger.debug(`Published RUN_FINISHED event for run: ${runId}, status: ${status}`);
-
+        // Only for RUN_FINISHED events, notify SSE clients
+        if (this.redisService) {
             // Notify SSE clients about the final state
             notifyClients(runId, event);
 
             // Send the DONE message and close connections
             notifyClients(runId, '[DONE]', true);
-        } catch (error) {
-            logger.error(`Error publishing run finished event: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 
@@ -666,9 +635,7 @@ export class TestRunner {
             // Ensure we're publishing to the correct channel and stringify the event
             const eventJson = JSON.stringify(event);
             logger.info(`Publishing event to Redis: ${event.type}, runId: ${event.runId}, channel: test-events`);
-            logger.debug(`Event data: ${eventJson}`);
             await this.redisService.publish('test-events', eventJson);
-            logger.info(`Successfully emitted event: ${event.type} for runId: ${event.runId}`);
         } catch (error) {
             logger.error(`Error emitting event: ${error instanceof Error ? error.message : String(error)}`);
         }

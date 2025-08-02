@@ -3,9 +3,7 @@ import cors from 'cors';
 import bodyParser from 'body-parser';
 import { createLogger } from './utils/logger';
 import { setupRoutes } from './routes';
-import { MinioService } from './services/minio-service';
-import { RedisService } from './services/redis-service';
-import { QueueService } from './services/queue-service';
+import { initializeServices, shutdownServices } from './utils/service-utils';
 
 const logger = createLogger('gateway');
 
@@ -17,12 +15,7 @@ async function startGateway() {
   
   try {
     // Initialize services
-    const minioService = new MinioService();
-    const redisService = new RedisService();
-    const queueService = new QueueService(redisService);
-    
-    // Ensure MinIO bucket exists
-    await minioService.ensureBucket();
+    const { minioService, redisService, queueService } = await initializeServices();
     
     // Create Express app
     const app = express();
@@ -77,8 +70,8 @@ async function startGateway() {
  */
 async function shutdown(
   server: any,
-  queueService: QueueService,
-  redisService: RedisService
+  queueService: any,
+  redisService: any
 ) {
   logger.info('Shutting down gateway service');
   
@@ -88,11 +81,8 @@ async function shutdown(
       logger.info('HTTP server closed');
     });
     
-    // Close queue connections
-    await queueService.close();
-    
-    // Close Redis connections
-    await redisService.close();
+    // Close service connections
+    await shutdownServices(queueService, redisService);
     
     logger.info('Gateway service shut down successfully');
     process.exit(0);
@@ -100,11 +90,6 @@ async function shutdown(
     logger.error(`Error shutting down gateway service: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   }
-}
-
-// Start the gateway service if this file is run directly
-if (require.main === module) {
-  startGateway();
 }
 
 export { startGateway };

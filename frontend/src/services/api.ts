@@ -56,13 +56,10 @@ export const apiService = {
    * Execute a test scenario
    */
   async executeTest(id: string): Promise<{ resultId: string; result: TestResult }> {
-    console.log('API Service: Executing test with ID:', id);
     try {
       const response = await api.post(`/tests/${id}/execute`);
-      console.log('API Service: Test execution response:', response.data);
       return response.data;
     } catch (error) {
-      console.error('API Service: Error executing test:', error);
       throw error;
     }
   },
@@ -79,32 +76,12 @@ export const apiService = {
    * Get a specific test result by ID
    */
   async getTestResult(id: string): Promise<TestResult> {
-    console.log('API Service: Getting test result with ID:', id);
     try {
       const response = await api.get(`/tests/results/${id}`);
-      console.log('API Service: Test result response:', response.data);
-      
-      // Log details about screenshots in the response
-      if (response.data && response.data.stepResults) {
-        const screenshotCount = response.data.stepResults.reduce(
-          (count: number, step: any) => count + (step.screenshots ? step.screenshots.length : 0), 0
-        );
-        console.log(`API Service: Result contains ${response.data.stepResults.length} steps with ${screenshotCount} total screenshots`);
-      }
-      
       return response.data;
     } catch (error) {
-      console.error('API Service: Error getting test result:', error);
       throw error;
     }
-  },
-
-  /**
-   * Get all results for a specific test
-   */
-  async getResultsForTest(testId: string): Promise<TestResult[]> {
-    const response = await api.get(`/tests/${testId}/results`);
-    return response.data;
   },
 
   /**

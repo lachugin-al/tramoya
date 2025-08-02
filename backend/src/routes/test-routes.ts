@@ -24,46 +24,94 @@ export default function testRoutes(
   const router = express.Router();
   
   // Subscribe to test events to update testResults
-  redisService.subscribe('test-events', (message: string) => {
-    try {
-      const event = JSON.parse(message);
-      if (event.type === 'RUN_FINISHED' && event.runId && testResults[event.runId]) {
-        // Update test result status and end time
-        testResults[event.runId].status = event.status;
-        testResults[event.runId].endTime = new Date();
-        testResults[event.runId].videoUrl = event.video;
-        testResults[event.runId].traceUrl = event.trace;
-        logger.info(`Updated test result status for ${event.runId}: ${event.status}`);
-      } else if (event.type === 'STEP' && event.runId && event.stepId && testResults[event.runId]) {
-        // Find and update the step result
-        const stepResult = testResults[event.runId].stepResults.find(s => s.stepId === event.stepId);
-        if (stepResult) {
-          stepResult.status = event.status;
-          if (event.url) {
-            stepResult.screenshots.push({
-              id: `screenshot_${Date.now()}`,
-              stepId: event.stepId,
-              timestamp: new Date(),
-              path: event.url || '',
-              url: event.url
-            });
+  try {
+    redisService.subscribe('test-events', (message: string) => {
+      try {
+        const event = JSON.parse(message);
+        if (event.type === 'RUN_FINISHED' && event.runId && testResults[event.runId]) {
+          // Update test result status and end time
+          testResults[event.runId].status = event.status;
+          testResults[event.runId].endTime = new Date();
+          testResults[event.runId].videoUrl = event.video;
+          testResults[event.runId].traceUrl = event.trace;
+          logger.info(`Updated test result status for ${event.runId}: ${event.status}`);
+        } else if (event.type === 'STEP' && event.runId && event.stepId && testResults[event.runId]) {
+          // Find and update the step result
+          const stepResult = testResults[event.runId].stepResults.find(s => s.stepId === event.stepId);
+          if (stepResult) {
+            stepResult.status = event.status;
+            if (event.url) {
+              stepResult.screenshots.push({
+                id: `screenshot_${Date.now()}`,
+                stepId: event.stepId,
+                timestamp: new Date(),
+                path: event.url || '',
+                url: event.url
+              });
+            }
+            logger.debug(`Updated step result status for ${event.runId}/${event.stepId}: ${event.status}`);
           }
-          logger.debug(`Updated step result status for ${event.runId}/${event.stepId}: ${event.status}`);
         }
+      } catch (error) {
+        logger.error(`Error processing test event: ${error instanceof Error ? error.message : String(error)}`);
       }
-    } catch (error) {
-      logger.error(`Error processing test event: ${error instanceof Error ? error.message : String(error)}`);
-    }
-  });
+    });
+  } catch (error) {
+    // Log the error but don't let it crash the router
+    logger.error(`Error subscribing to test events: ${error instanceof Error ? error.message : String(error)}`);
+    logger.warn('Test event subscription failed, real-time updates will not be available');
+  }
 
   /**
    * GET /tests
    * Get all test scenarios
    */
   router.get('/', (req, res) => {
-    const tests = Object.values(testScenarios);
-    logger.info(`Retrieved ${tests.length} test scenarios`);
-    res.json(tests);
+    try {
+      const tests = Object.values(testScenarios);
+      logger.info(`Retrieved ${tests.length} test scenarios`);
+      res.json(tests);
+    } catch (error) {
+      logger.error(`Error retrieving test scenarios: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error retrieving test scenarios' });
+    }
+  });
+  
+  /**
+   * GET /tests/results
+   * Get all test results
+   */
+  router.get('/results', (req, res) => {
+    try {
+      const results = Object.values(testResults);
+      logger.info(`Retrieved ${results.length} test results`);
+      res.json(results);
+    } catch (error) {
+      logger.error(`Error retrieving test results: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error retrieving test results' });
+    }
+  });
+  
+  /**
+   * GET /tests/results/:id
+   * Get a specific test result by ID
+   */
+  router.get('/results/:id', (req, res) => {
+    try {
+      const { id } = req.params;
+      const result = testResults[id];
+      
+      if (!result) {
+        logger.warn(`Test result not found: ${id}`);
+        return res.status(404).json({ error: 'Test result not found' });
+      }
+      
+      logger.info(`Retrieved test result: ${id}`);
+      res.json(result);
+    } catch (error) {
+      logger.error(`Error retrieving test result: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error retrieving test result' });
+    }
   });
 
   /**
@@ -71,16 +119,21 @@ export default function testRoutes(
    * Get a specific test scenario by ID
    */
   router.get('/:id', (req, res) => {
-    const { id } = req.params;
-    const test = testScenarios[id];
-    
-    if (!test) {
-      logger.warn(`Test scenario not found: ${id}`);
-      return res.status(404).json({ error: 'Test scenario not found' });
+    try {
+      const { id } = req.params;
+      const test = testScenarios[id];
+      
+      if (!test) {
+        logger.warn(`Test scenario not found: ${id}`);
+        return res.status(404).json({ error: 'Test scenario not found' });
+      }
+      
+      logger.info(`Retrieved test scenario: ${id}`);
+      res.json(test);
+    } catch (error) {
+      logger.error(`Error retrieving test scenario: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error retrieving test scenario' });
     }
-    
-    logger.info(`Retrieved test scenario: ${id}`);
-    res.json(test);
   });
 
   /**
@@ -88,31 +141,36 @@ export default function testRoutes(
    * Create a new test scenario
    */
   router.post('/', (req, res) => {
-    const { name, description, steps } = req.body;
-    
-    if (!name) {
-      return res.status(400).json({ error: 'Test name is required' });
+    try {
+      const { name, description, steps } = req.body;
+      
+      if (!name) {
+        return res.status(400).json({ error: 'Test name is required' });
+      }
+      
+      // Validate steps if provided
+      if (steps && !Array.isArray(steps)) {
+        return res.status(400).json({ error: 'Steps must be an array' });
+      }
+      
+      // Add unique IDs to steps if they don't have them
+      const stepsWithIds = steps?.map((step: TestStep) => ({
+        ...step,
+        id: step.id || uuidv4()
+      })) || [];
+      
+      // Create the test scenario
+      const testScenario = createTestScenario(name, description, stepsWithIds);
+      
+      // Store it
+      testScenarios[testScenario.id] = testScenario;
+      
+      logger.info(`Created new test scenario: ${testScenario.id}`);
+      res.status(201).json(testScenario);
+    } catch (error) {
+      logger.error(`Error creating test scenario: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error creating test scenario' });
     }
-    
-    // Validate steps if provided
-    if (steps && !Array.isArray(steps)) {
-      return res.status(400).json({ error: 'Steps must be an array' });
-    }
-    
-    // Add unique IDs to steps if they don't have them
-    const stepsWithIds = steps?.map((step: TestStep) => ({
-      ...step,
-      id: step.id || uuidv4()
-    })) || [];
-    
-    // Create the test scenario
-    const testScenario = createTestScenario(name, description, stepsWithIds);
-    
-    // Store it
-    testScenarios[testScenario.id] = testScenario;
-    
-    logger.info(`Created new test scenario: ${testScenario.id}`);
-    res.status(201).json(testScenario);
   });
 
   /**
@@ -120,45 +178,50 @@ export default function testRoutes(
    * Update an existing test scenario
    */
   router.put('/:id', (req, res) => {
-    const { id } = req.params;
-    const { name, description, steps } = req.body;
-    
-    // Check if test exists
-    if (!testScenarios[id]) {
-      logger.warn(`Test scenario not found for update: ${id}`);
-      return res.status(404).json({ error: 'Test scenario not found' });
+    try {
+      const { id } = req.params;
+      const { name, description, steps } = req.body;
+      
+      // Check if test exists
+      if (!testScenarios[id]) {
+        logger.warn(`Test scenario not found for update: ${id}`);
+        return res.status(404).json({ error: 'Test scenario not found' });
+      }
+      
+      // Validate required fields
+      if (!name) {
+        return res.status(400).json({ error: 'Test name is required' });
+      }
+      
+      // Validate steps if provided
+      if (steps && !Array.isArray(steps)) {
+        return res.status(400).json({ error: 'Steps must be an array' });
+      }
+      
+      // Add unique IDs to steps if they don't have them
+      const stepsWithIds = steps?.map((step: TestStep) => ({
+        ...step,
+        id: step.id || uuidv4()
+      })) || [];
+      
+      // Update the test scenario
+      const updatedTest: TestScenario = {
+        ...testScenarios[id],
+        name,
+        description,
+        steps: stepsWithIds,
+        updatedAt: new Date()
+      };
+      
+      // Store it
+      testScenarios[id] = updatedTest;
+      
+      logger.info(`Updated test scenario: ${id}`);
+      res.json(updatedTest);
+    } catch (error) {
+      logger.error(`Error updating test scenario: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error updating test scenario' });
     }
-    
-    // Validate required fields
-    if (!name) {
-      return res.status(400).json({ error: 'Test name is required' });
-    }
-    
-    // Validate steps if provided
-    if (steps && !Array.isArray(steps)) {
-      return res.status(400).json({ error: 'Steps must be an array' });
-    }
-    
-    // Add unique IDs to steps if they don't have them
-    const stepsWithIds = steps?.map((step: TestStep) => ({
-      ...step,
-      id: step.id || uuidv4()
-    })) || [];
-    
-    // Update the test scenario
-    const updatedTest: TestScenario = {
-      ...testScenarios[id],
-      name,
-      description,
-      steps: stepsWithIds,
-      updatedAt: new Date()
-    };
-    
-    // Store it
-    testScenarios[id] = updatedTest;
-    
-    logger.info(`Updated test scenario: ${id}`);
-    res.json(updatedTest);
   });
 
   /**
@@ -166,19 +229,24 @@ export default function testRoutes(
    * Delete a test scenario
    */
   router.delete('/:id', (req, res) => {
-    const { id } = req.params;
-    
-    // Check if test exists
-    if (!testScenarios[id]) {
-      logger.warn(`Test scenario not found for deletion: ${id}`);
-      return res.status(404).json({ error: 'Test scenario not found' });
+    try {
+      const { id } = req.params;
+      
+      // Check if test exists
+      if (!testScenarios[id]) {
+        logger.warn(`Test scenario not found for deletion: ${id}`);
+        return res.status(404).json({ error: 'Test scenario not found' });
+      }
+      
+      // Delete the test scenario
+      delete testScenarios[id];
+      
+      logger.info(`Deleted test scenario: ${id}`);
+      res.status(204).send();
+    } catch (error) {
+      logger.error(`Error deleting test scenario: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error deleting test scenario' });
     }
-    
-    // Delete the test scenario
-    delete testScenarios[id];
-    
-    logger.info(`Deleted test scenario: ${id}`);
-    res.status(204).send();
   });
 
   /**
@@ -240,9 +308,14 @@ export default function testRoutes(
    * Get all test results
    */
   router.get('/results', (req, res) => {
-    const results = Object.values(testResults);
-    logger.info(`Retrieved ${results.length} test results`);
-    res.json(results);
+    try {
+      const results = Object.values(testResults);
+      logger.info(`Retrieved ${results.length} test results`);
+      res.json(results);
+    } catch (error) {
+      logger.error(`Error retrieving test results: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error retrieving test results' });
+    }
   });
 
   /**
@@ -250,16 +323,21 @@ export default function testRoutes(
    * Get a specific test result by ID
    */
   router.get('/results/:id', (req, res) => {
-    const { id } = req.params;
-    const result = testResults[id];
-    
-    if (!result) {
-      logger.warn(`Test result not found: ${id}`);
-      return res.status(404).json({ error: 'Test result not found' });
+    try {
+      const { id } = req.params;
+      const result = testResults[id];
+      
+      if (!result) {
+        logger.warn(`Test result not found: ${id}`);
+        return res.status(404).json({ error: 'Test result not found' });
+      }
+      
+      logger.info(`Retrieved test result: ${id}`);
+      res.json(result);
+    } catch (error) {
+      logger.error(`Error retrieving test result: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error retrieving test result' });
     }
-    
-    logger.info(`Retrieved test result: ${id}`);
-    res.json(result);
   });
 
   /**
@@ -267,19 +345,24 @@ export default function testRoutes(
    * Delete a test result
    */
   router.delete('/results/:id', (req, res) => {
-    const { id } = req.params;
-    
-    // Check if result exists
-    if (!testResults[id]) {
-      logger.warn(`Test result not found for deletion: ${id}`);
-      return res.status(404).json({ error: 'Test result not found' });
+    try {
+      const { id } = req.params;
+      
+      // Check if result exists
+      if (!testResults[id]) {
+        logger.warn(`Test result not found for deletion: ${id}`);
+        return res.status(404).json({ error: 'Test result not found' });
+      }
+      
+      // Delete the test result
+      delete testResults[id];
+      
+      logger.info(`Deleted test result: ${id}`);
+      res.status(204).send();
+    } catch (error) {
+      logger.error(`Error deleting test result: ${error instanceof Error ? error.message : String(error)}`);
+      res.status(500).json({ error: 'Error deleting test result' });
     }
-    
-    // Delete the test result
-    delete testResults[id];
-    
-    logger.info(`Deleted test result: ${id}`);
-    res.status(204).send();
   });
 
   return router;
