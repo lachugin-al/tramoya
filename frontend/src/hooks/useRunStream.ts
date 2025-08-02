@@ -43,6 +43,20 @@ export const useRunStream = (
                 console.log('Adding missing endTime to completed test');
             }
             
+            // Check if videoUrl is undefined or null and set it to empty string
+            if (testResult.videoUrl === undefined || testResult.videoUrl === null) {
+                updatedFields.videoUrl = '';
+                needsUpdate = true;
+                console.log('Setting undefined videoUrl to empty string');
+            }
+            
+            // Check if traceUrl is undefined or null and set it to empty string
+            if (testResult.traceUrl === undefined || testResult.traceUrl === null) {
+                updatedFields.traceUrl = '';
+                needsUpdate = true;
+                console.log('Setting undefined traceUrl to empty string');
+            }
+            
             // Check if summary is missing and generate it
             if (!testResult.summary) {
                 const stepResults = testResult.stepResults || [];
@@ -86,14 +100,14 @@ export const useRunStream = (
             // Enhanced logging to verify our fixes
             console.log('TestResult state updated:', {
                 id: testResult.id,
-                testId: testResult.testId,  // Verify testId is populated
+                testId: testResult.testId || '',  // Verify testId is populated, fallback to empty string
                 status: testResult.status,
                 startTime: testResult.startTime,
-                endTime: testResult.endTime,  // Verify endTime is set for completed tests
+                endTime: testResult.endTime || 'not completed',  // Provide a fallback for endTime
                 stepResults: testResult.stepResults.length,
-                summary: testResult.summary,  // Verify summary is generated
-                videoUrl: testResult.videoUrl,
-                traceUrl: testResult.traceUrl
+                summary: testResult.summary || 'not available',  // Provide a fallback for summary
+                videoUrl: testResult.videoUrl || '',  // Provide a fallback for videoUrl
+                traceUrl: testResult.traceUrl || ''   // Provide a fallback for traceUrl
             });
             
             console.log('Current steps:', testResult.stepResults.map(step =>
@@ -125,7 +139,6 @@ export const useRunStream = (
             eventSource = new EventSourcePolyfill(`/api/v1/stream/${runId}`, {
                 withCredentials: false,
             });
-            console.log('EventSource instance created:', eventSource);
 
             // Handle connection open
             eventSource.onopen = () => {
@@ -222,6 +235,8 @@ export const useRunStream = (
                             startTime: new Date(data.ts).toISOString(),
                             endTime: undefined,
                             stepResults: [],
+                            videoUrl: '',  // Initialize with empty string instead of undefined
+                            traceUrl: '',  // Initialize with empty string instead of undefined
                         };
 
                         /* 2. находим/создаём запись шага */
@@ -273,9 +288,21 @@ export const useRunStream = (
                         const result: TestResult = {
                             ...baseResult,
                             stepResults: updatedStepResults,
+                            // Ensure videoUrl and traceUrl are never undefined
+                            videoUrl: baseResult.videoUrl || '',
+                            traceUrl: baseResult.traceUrl || ''
                         };
 
-                        console.log('Updated test result after frame event:', result);
+                        console.log('Updated test result after frame event:', {
+                            id: result.id,
+                            testId: result.testId,
+                            status: result.status,
+                            startTime: result.startTime,
+                            endTime: result.endTime,
+                            stepResults: result.stepResults.length,
+                            videoUrl: result.videoUrl,
+                            traceUrl: result.traceUrl
+                        });
                         return result;
                     });
                 } catch (err) {
@@ -560,6 +587,16 @@ export const useRunStream = (
                     console.error('Error processing message event:', err);
                 }
             };
+            
+            // Log EventSource instance after all handlers are assigned
+            console.log('EventSource instance created with all handlers:', {
+                instance: 'EventSourcePolyfill',
+                url: `/api/v1/stream/${runId}`,
+                onopen: typeof eventSource.onopen === 'function' ? 'function() {...}' : eventSource.onopen,
+                onmessage: typeof eventSource.onmessage === 'function' ? 'function() {...}' : eventSource.onmessage,
+                onerror: typeof eventSource.onerror === 'function' ? 'function() {...}' : eventSource.onerror,
+                readyState: eventSource.readyState
+            });
 
         } catch (err) {
             console.error('Error setting up SSE connection:', err);
