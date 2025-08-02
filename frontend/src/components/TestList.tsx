@@ -22,14 +22,12 @@ const TestList: React.FC = () => {
       setTests(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching tests:', err);
       setError('Failed to load tests. Please try again.');
       toast.error('Failed to load tests');
     } finally {
       setLoading(false);
     }
   };
-
 
   // Delete a test
   const deleteTest = async (id: string) => {
@@ -42,7 +40,6 @@ const TestList: React.FC = () => {
       setTests(tests.filter(test => test.id !== id));
       toast.success('Test deleted successfully');
     } catch (err) {
-      console.error('Error deleting test:', err);
       toast.error('Failed to delete test');
     }
   };

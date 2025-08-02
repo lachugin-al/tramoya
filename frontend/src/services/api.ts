@@ -56,12 +56,8 @@ export const apiService = {
    * Execute a test scenario
    */
   async executeTest(id: string): Promise<{ resultId: string; result: TestResult }> {
-    try {
-      const response = await api.post(`/tests/${id}/execute`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.post(`/tests/${id}/execute`);
+    return response.data;
   },
 
   /**
@@ -76,12 +72,8 @@ export const apiService = {
    * Get a specific test result by ID
    */
   async getTestResult(id: string): Promise<TestResult> {
-    try {
-      const response = await api.get(`/tests/results/${id}`);
-      return response.data;
-    } catch (error) {
-      throw error;
-    }
+    const response = await api.get(`/tests/results/${id}`);
+    return response.data;
   },
 
   /**

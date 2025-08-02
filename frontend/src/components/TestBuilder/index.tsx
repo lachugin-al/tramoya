@@ -68,29 +68,18 @@ const TestBuilder: React.FC = () => {
   
   // Update test status when testResult changes
   useEffect(() => {
-    console.log('TestBuilder: testResult changed:', testResult);
-    
     if (testResult) {
-      console.log('TestBuilder: Updating test status to:', testResult.status);
       setTestStatus(testResult.status);
       
       // Update current URL if there's a navigate step
       if (testResult.stepResults.length > 0) {
         const stepId = testResult.stepResults[0].stepId;
-        console.log('TestBuilder: First step ID:', stepId);
         
         const step = test.steps.find(s => s.id === stepId);
         if (step && step.type === TestStepType.NAVIGATE) {
-          console.log('TestBuilder: Updating current URL to:', (step as NavigateStep).url);
           setCurrentUrl((step as NavigateStep).url);
-        } else {
-          console.log('TestBuilder: No matching navigate step found for stepId:', stepId);
         }
       }
-      
-      console.log('TestBuilder: Step results count:', testResult.stepResults.length);
-      console.log('TestBuilder: Steps with screenshots:', 
-        testResult.stepResults.filter(step => step.screenshots.length > 0).length);
     }
   }, [testResult, test.steps]);
 
@@ -102,7 +91,6 @@ const TestBuilder: React.FC = () => {
       setTest(data);
       setError(null);
     } catch (err) {
-      console.error('Error fetching test:', err);
       setError('Failed to load test. Please try again.');
       toast.error('Failed to load test');
     } finally {
@@ -135,7 +123,6 @@ const TestBuilder: React.FC = () => {
         navigate(`/edit/${createdTest.id}`);
       }
     } catch (err) {
-      console.error('Error saving test:', err);
       toast.error('Failed to save test');
     } finally {
       setSaving(false);
@@ -144,32 +131,22 @@ const TestBuilder: React.FC = () => {
 
   // Fetch initial test result (only used for the first fetch)
   const fetchInitialTestResult = async (resultId: string) => {
-    console.log('TestBuilder: Fetching initial test result for ID:', resultId);
     try {
       const result = await apiService.getTestResult(resultId);
-      console.log('TestBuilder: Initial test result fetched:', result);
       
       // Set the current run ID to start the SSE connection
-      console.log('TestBuilder: Setting currentRunId to start SSE connection:', resultId);
       setCurrentRunId(resultId);
       
       // Update current URL if there's a navigate step
       if (result.stepResults.length > 0) {
         const stepId = result.stepResults[0].stepId;
-        console.log('TestBuilder: First step ID in initial result:', stepId);
         
         const step = test.steps.find(s => s.id === stepId);
         if (step && step.type === TestStepType.NAVIGATE) {
-          console.log('TestBuilder: Setting initial URL to:', (step as NavigateStep).url);
           setCurrentUrl((step as NavigateStep).url);
-        } else {
-          console.log('TestBuilder: No matching navigate step found in initial result for stepId:', stepId);
         }
-      } else {
-        console.log('TestBuilder: No step results in initial test result');
       }
     } catch (err) {
-      console.error('Error fetching initial test result:', err);
       toast.error('Failed to fetch test result');
       setTestStatus(TestStatus.ERROR);
     }
@@ -177,49 +154,30 @@ const TestBuilder: React.FC = () => {
 
   // Run test
   const handleRunTest = async () => {
-    console.log('TestBuilder: handleRunTest called');
-    
     if (!test.name.trim() || test.steps.length === 0) {
-      console.log('TestBuilder: Test validation failed - missing name or steps');
       toast.error('Test needs a name and at least one step');
       return;
     }
 
     try {
       // Reset state
-      console.log('TestBuilder: Resetting state for new test run');
       setTestStatus(TestStatus.RUNNING);
-      console.log('TestBuilder: Setting test status to RUNNING');
-      
-      if (currentRunId) {
-        console.log('TestBuilder: Clearing previous runId:', currentRunId);
-      }
       setCurrentRunId(null); // Reset current run ID to close any existing SSE connection
-      
-      console.log('TestBuilder: Setting current step index to 0');
       setCurrentStepIndex(0);
 
       // Execute test
-      console.log('TestBuilder: Executing test with ID:', test.id);
       const { resultId } = await apiService.executeTest(test.id);
-      console.log('TestBuilder: Test execution queued, received resultId:', resultId);
 
       // Fetch initial result and start SSE connection
-      console.log('TestBuilder: Fetching initial result to start SSE connection');
       fetchInitialTestResult(resultId);
 
       // Update current URL if there's a navigate step
       if (test.steps.length > 0 && test.steps[0].type === TestStepType.NAVIGATE) {
         const url = (test.steps[0] as NavigateStep).url;
-        console.log('TestBuilder: Setting initial URL from first navigate step:', url);
         setCurrentUrl(url);
-      } else {
-        console.log('TestBuilder: No navigate step found as first step');
       }
     } catch (err) {
-      console.error('Error executing test:', err);
       toast.error('Failed to execute test');
-      console.log('TestBuilder: Setting test status to ERROR due to execution failure');
       setTestStatus(TestStatus.ERROR);
     }
   };

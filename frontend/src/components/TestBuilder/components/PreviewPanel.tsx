@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TestStatus, TestResult, Screenshot } from '../../../types';
-import { debugLog, verifyImageUrl } from '../../../utils/debug';
+import { debugLog, debugError, verifyImageUrl } from '../../../utils/debug';
 import DebugPanel from './DebugPanel';
 
 interface PreviewPanelProps {
@@ -243,26 +243,20 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           </div>
           
           <div className="browser-viewport">
-            {/* Log rendering browser viewport */}
-            {(() => { console.log('PreviewPanel: Rendering browser viewport, test status:', testStatus, 'screenshots:', currentStepScreenshots.length); return null; })()}
             {testStatus === TestStatus.RUNNING && !currentStepScreenshots.length ? (
               <div className="loading-state">
-                {/* Log showing loading state */}
-                {(() => { console.log('PreviewPanel: Showing loading state'); return null; })()}
                 <div className="loading-spinner"></div>
                 <p>Test is running...</p>
               </div>
             ) : currentStepScreenshots.length > 0 ? (
               <div className="screenshot-container">
-                {/* Log showing screenshot */}
-                {(() => { console.log('PreviewPanel: Showing screenshot at index', screenshotIndex, 'URL:', currentStepScreenshots[screenshotIndex].url); return null; })()}
                 <img 
                   src={currentStepScreenshots[screenshotIndex].url} 
                   alt={`Screenshot ${screenshotIndex + 1} of step ${currentStepIndex + 1}`}
                   className="screenshot-image"
                   onLoad={(e) => {
                     const img = e.target as HTMLImageElement;
-                    console.log('PreviewPanel: Screenshot image loaded successfully', {
+                    debugLog('PreviewPanel', 'Screenshot image loaded successfully', {
                       url: currentStepScreenshots[screenshotIndex].url,
                       naturalWidth: img.naturalWidth,
                       naturalHeight: img.naturalHeight,
@@ -273,7 +267,7 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                   }}
                   onError={(e) => {
                     const img = e.target as HTMLImageElement;
-                    console.error('PreviewPanel: Error loading screenshot image:', {
+                    debugError('PreviewPanel', 'Error loading screenshot image:', {
                       url: currentStepScreenshots[screenshotIndex].url,
                       error: e,
                       currentSrc: img.currentSrc,

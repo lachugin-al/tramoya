@@ -3,10 +3,10 @@
  */
 
 // Enable or disable debug mode
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 // Enable or disable image debugging
-const IMAGE_DEBUG_MODE = true;
+const IMAGE_DEBUG_MODE = false;
 
 /**
  * Log a debug message to the console
