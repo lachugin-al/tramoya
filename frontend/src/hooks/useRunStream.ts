@@ -295,13 +295,13 @@ export const useRunStream = (
 
                         console.log('Updated test result after frame event:', {
                             id: result.id,
-                            testId: result.testId,
+                            testId: result.testId || '',
                             status: result.status,
                             startTime: result.startTime,
-                            endTime: result.endTime,
+                            endTime: result.endTime || 'not completed',  // Add fallback for running tests
                             stepResults: result.stepResults.length,
-                            videoUrl: result.videoUrl,
-                            traceUrl: result.traceUrl
+                            videoUrl: result.videoUrl || '',
+                            traceUrl: result.traceUrl || ''
                         });
                         return result;
                     });
