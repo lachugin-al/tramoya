@@ -21,14 +21,81 @@ interface RunStreamEvent {
  */
 export const useRunStream = (
     runId: string | null,
-    initialResult?: TestResult | null
+    initialResult?: TestResult | null,
+    testId?: string | null
 ) => {
     const [testResult, setTestResult] = useState<TestResult | null>(initialResult || null);
 
-    // Add effect to log testResult changes
+    // Add effect to log testResult changes and ensure required fields are set
     useEffect(() => {
         if (testResult) {
-            console.log('TestResult state updated:', testResult);
+            let needsUpdate = false;
+            let updatedFields: Record<string, any> = {};
+            
+            // Check if test has a final status but no endTime
+            if ((testResult.status === TestStatus.PASSED || 
+                 testResult.status === TestStatus.FAILED || 
+                 testResult.status === TestStatus.ERROR) && 
+                !testResult.endTime) {
+                
+                updatedFields.endTime = new Date().toISOString();
+                needsUpdate = true;
+                console.log('Adding missing endTime to completed test');
+            }
+            
+            // Check if summary is missing and generate it
+            if (!testResult.summary) {
+                const stepResults = testResult.stepResults || [];
+                const totalSteps = stepResults.length;
+                const passedSteps = stepResults.filter(s => s.status === StepStatus.PASSED).length;
+                const failedSteps = stepResults.filter(s => s.status === StepStatus.FAILED).length;
+                const skippedSteps = stepResults.filter(s => s.status === StepStatus.SKIPPED).length;
+                const errorSteps = stepResults.filter(s => s.status === StepStatus.ERROR).length;
+                
+                // Calculate duration if possible
+                let duration = 0;
+                if (testResult.endTime && testResult.startTime) {
+                    duration = new Date(testResult.endTime).getTime() - new Date(testResult.startTime).getTime();
+                }
+                
+                updatedFields.summary = {
+                    totalSteps,
+                    passedSteps,
+                    failedSteps,
+                    skippedSteps,
+                    errorSteps,
+                    duration
+                };
+                
+                needsUpdate = true;
+                console.log('Adding missing summary to test result');
+            }
+            
+            // Update the test result if needed
+            if (needsUpdate) {
+                setTestResult(prevResult => {
+                    if (!prevResult) return prevResult;
+                    
+                    return {
+                        ...prevResult,
+                        ...updatedFields
+                    };
+                });
+            }
+            
+            // Enhanced logging to verify our fixes
+            console.log('TestResult state updated:', {
+                id: testResult.id,
+                testId: testResult.testId,  // Verify testId is populated
+                status: testResult.status,
+                startTime: testResult.startTime,
+                endTime: testResult.endTime,  // Verify endTime is set for completed tests
+                stepResults: testResult.stepResults.length,
+                summary: testResult.summary,  // Verify summary is generated
+                videoUrl: testResult.videoUrl,
+                traceUrl: testResult.traceUrl
+            });
+            
             console.log('Current steps:', testResult.stepResults.map(step =>
                 `${step.stepId}: ${step.status} (${step.screenshots.length} screenshots)`).join(', '));
         }
@@ -150,7 +217,7 @@ export const useRunStream = (
                         /* 1. базовый скелет результата, если его ещё нет */
                         const baseResult: TestResult = prevResult ?? {
                             id: data.runId,
-                            testId: '',                       // ← при желании заполните
+                            testId: testId || data.runId,    // Use provided testId or fallback to runId
                             status: TestStatus.RUNNING,
                             startTime: new Date(data.ts).toISOString(),
                             endTime: undefined,

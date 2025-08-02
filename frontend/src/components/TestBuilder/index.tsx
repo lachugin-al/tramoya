@@ -67,7 +67,7 @@ const TestBuilder: React.FC = () => {
     // loading: streamLoading, 
     // error: streamError, 
     // connected: streamConnected 
-  } = useRunStream(currentRunId);
+  } = useRunStream(currentRunId, null, test.id);
 
   // Fetch test if in edit mode
   useEffect(() => {
