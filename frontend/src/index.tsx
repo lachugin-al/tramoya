@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 import App from './App';
 import './index.css';
-import { configureLogger, createLogger, LogLevel, enableServerLogging } from './services/logger';
+import { configureLogger, createLogger, LogLevel, enableServerLogging } from './utils/logger';
 
 // Initialize and configure the logger
 configureLogger({

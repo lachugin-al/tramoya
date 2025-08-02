@@ -26,7 +26,7 @@ import {
   LogLevel, 
   configureLogger, 
   setLogLevel 
-} from './services/logger';
+} from './utils/logger';
 
 // Create loggers for different modules
 const mainLogger = createLogger('test-logging');

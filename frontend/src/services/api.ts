@@ -1,6 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { TestScenario, TestResult } from '../types';
-import { createLogger } from './logger';
+import { createLogger } from '../utils/logger';
 
 // Create logger for API service
 const logger = createLogger('api-service');

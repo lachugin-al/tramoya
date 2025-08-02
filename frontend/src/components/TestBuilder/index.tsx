@@ -5,7 +5,7 @@ import { toast } from 'react-toastify';
 import { v4 as uuidv4 } from 'uuid';
 import apiService from '../../services/api';
 import useRunStream from '../../hooks/useRunStream';
-import { createLogger } from '../../services/logger';
+import { createLogger } from '../../utils/logger';
 import {
   TestScenario,
   TestStep,
