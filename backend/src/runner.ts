@@ -6,7 +6,19 @@ import os from 'os';
 const logger = createLogger('runner');
 
 /**
- * Initialize and start the runner service
+ * Initializes and starts the runner service.
+ * 
+ * This function:
+ * 1. Logs system information (node version, platform, architecture, etc.)
+ * 2. Initializes required services (MinIO, Redis, Queue)
+ * 3. Creates and starts a RunnerWorker instance
+ * 4. Sets up event handlers for graceful shutdown
+ * 5. Sets up error handling for uncaught exceptions and unhandled promise rejections
+ * 6. Configures periodic logging of system statistics
+ * 
+ * @async
+ * @returns {Promise<void>} A promise that resolves when the runner service is started
+ * @throws {Error} If there's an error during service initialization or startup
  */
 async function startRunner() {
   logger.info('Starting runner service', { 
@@ -104,7 +116,20 @@ async function startRunner() {
 }
 
 /**
- * Gracefully shut down the runner service
+ * Gracefully shuts down the runner service.
+ * 
+ * This function:
+ * 1. Stops the runner worker
+ * 2. Closes connections to external services (Queue, Redis)
+ * 3. Logs the shutdown status
+ * 4. Exits the process
+ * 
+ * @async
+ * @param {RunnerWorker} runnerWorker - The runner worker instance to stop
+ * @param {any} queueService - The queue service instance to shut down
+ * @param {any} redisService - The Redis service instance to shut down
+ * @returns {Promise<void>} A promise that resolves when the shutdown is complete
+ * @throws {Error} If there's an error during the shutdown process
  */
 async function shutdown(
   runnerWorker: RunnerWorker,

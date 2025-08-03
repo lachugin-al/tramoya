@@ -3,6 +3,20 @@ import { TestStatus, TestResult, Screenshot } from '../../../types';
 import { debugLog, debugError, verifyImageUrl } from '../../../utils/debug';
 import DebugPanel from './DebugPanel';
 
+/**
+ * Props for the PreviewPanel component
+ * 
+ * @interface PreviewPanelProps
+ * @property {TestStatus} testStatus - The current status of the test
+ * @property {string} selectedBrowser - The currently selected browser for test execution
+ * @property {function} onBrowserChange - Callback function when the browser is changed
+ * @property {function} onRunTest - Callback function to run the test
+ * @property {function} onPauseTest - Callback function to pause the test
+ * @property {string} [currentUrl] - The current URL being tested
+ * @property {TestResult|null} [testResult] - The result of the test execution
+ * @property {number} [currentStepIndex=0] - The index of the current step being executed
+ * @property {function} [onStepChange] - Callback function when the current step is changed
+ */
 interface PreviewPanelProps {
   testStatus: TestStatus;
   selectedBrowser: string;
@@ -15,6 +29,13 @@ interface PreviewPanelProps {
   onStepChange?: (index: number) => void;
 }
 
+/**
+ * Available browsers for test execution
+ * 
+ * @constant
+ * @type {Array<{value: string, label: string, icon: string}>}
+ * @description List of browsers that can be selected for test execution
+ */
 const browsers = [
   { value: 'chrome', label: 'Chrome', icon: '🌐' },
   { value: 'firefox', label: 'Firefox', icon: '🦊' },
@@ -22,6 +43,13 @@ const browsers = [
   { value: 'edge', label: 'Edge', icon: '🌊' },
 ];
 
+/**
+ * Configuration for test status display
+ * 
+ * @constant
+ * @type {Object<TestStatus, {label: string, color: string, bgColor: string}>}
+ * @description Visual configuration for each test status, including label, text color, and background color
+ */
 const statusConfig = {
   [TestStatus.PENDING]: { label: 'READY', color: '#6b7280', bgColor: '#f3f4f6' },
   [TestStatus.RUNNING]: { label: 'RUNNING', color: '#059669', bgColor: '#d1fae5' },
@@ -30,6 +58,33 @@ const statusConfig = {
   [TestStatus.ERROR]: { label: 'ERROR', color: '#d97706', bgColor: '#fef3c7' },
 };
 
+/**
+ * PreviewPanel Component
+ * 
+ * @component
+ * @description Displays a preview of the test execution, including screenshots and test status.
+ * Provides controls for running or pausing the test, navigating through test steps and screenshots,
+ * and viewing the test trace. The component shows the visual output of the test execution and
+ * allows the user to interact with the test.
+ * 
+ * @param {PreviewPanelProps} props - Component props
+ * @returns {JSX.Element} The rendered preview panel
+ * 
+ * @example
+ * ```tsx
+ * <PreviewPanel
+ *   testStatus={TestStatus.RUNNING}
+ *   selectedBrowser="chrome"
+ *   onBrowserChange={handleBrowserChange}
+ *   onRunTest={handleRunTest}
+ *   onPauseTest={handlePauseTest}
+ *   currentUrl="https://example.com"
+ *   testResult={testResult}
+ *   currentStepIndex={2}
+ *   onStepChange={handleStepChange}
+ * />
+ * ```
+ */
 const PreviewPanel: React.FC<PreviewPanelProps> = ({
   testStatus,
   selectedBrowser,
@@ -45,11 +100,29 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
   // const normalizedStatus = testStatus?.toLowerCase() as TestStatus;
   // const status = statusConfig[testStatus];
 
+  /**
+   * Current status configuration based on testStatus
+   */
   const status = statusConfig[testStatus];
+  
+  /**
+   * State to track the index of the current screenshot being displayed
+   */
   const [screenshotIndex, setScreenshotIndex] = useState(0);
+  
+  /**
+   * State to track whether to show the debug panel
+   */
   const [showDebug, setShowDebug] = useState(false);
   
-  // Get screenshots for the current step
+  /**
+   * Get screenshots for the current step
+   * 
+   * @type {Screenshot[]}
+   * @description Calculates and returns the screenshots for the current step.
+   * Returns an empty array if no test result is available, if there are no step results,
+   * or if the current step index is out of bounds.
+   */
   const currentStepScreenshots: Screenshot[] = React.useMemo(() => {
     debugLog('PreviewPanel', `Calculating screenshots for step ${currentStepIndex}`);
     
@@ -98,13 +171,24 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     return screenshots;
   }, [testResult, currentStepIndex]);
   
-  // Reset screenshot index when step changes
+  /**
+   * Effect to reset screenshot index when step changes
+   * 
+   * @effect
+   * @description Resets the screenshot index to 0 whenever the current step changes
+   */
   React.useEffect(() => {
     debugLog('PreviewPanel', `Step changed to ${currentStepIndex}, resetting screenshot index to 0`);
     setScreenshotIndex(0);
   }, [currentStepIndex]);
   
-  // Proactively verify image URLs when screenshots change
+  /**
+   * Effect to verify image URLs when screenshots change
+   * 
+   * @effect
+   * @description Proactively verifies the URL of the current screenshot
+   * to ensure it's valid and accessible
+   */
   React.useEffect(() => {
     if (currentStepScreenshots.length > 0 && currentStepScreenshots[screenshotIndex]?.url) {
       debugLog('PreviewPanel', `Proactively verifying screenshot image at index ${screenshotIndex}`);
@@ -118,7 +202,12 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     }
   }, [currentStepScreenshots, screenshotIndex]);
   
-  // Log when component props change
+  /**
+   * Effect to log component props changes
+   * 
+   * @effect
+   * @description Logs when component props change for debugging purposes
+   */
   useEffect(() => {
     debugLog('PreviewPanel', 'Component props updated', {
       testStatus,
@@ -130,26 +219,48 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     });
   }, [testStatus, selectedBrowser, currentUrl, testResult, currentStepIndex, currentStepScreenshots.length]);
   
-  // Handle navigation between screenshots
+  /**
+   * Navigates to the previous screenshot
+   * 
+   * @function handlePrevScreenshot
+   * @description Decrements the screenshot index if not at the first screenshot
+   */
   const handlePrevScreenshot = () => {
     if (screenshotIndex > 0) {
       setScreenshotIndex(screenshotIndex - 1);
     }
   };
   
+  /**
+   * Navigates to the next screenshot
+   * 
+   * @function handleNextScreenshot
+   * @description Increments the screenshot index if not at the last screenshot
+   */
   const handleNextScreenshot = () => {
     if (screenshotIndex < currentStepScreenshots.length - 1) {
       setScreenshotIndex(screenshotIndex + 1);
     }
   };
   
-  // Handle navigation between steps
+  /**
+   * Navigates to the previous step
+   * 
+   * @function handlePrevStep
+   * @description Calls onStepChange with the previous step index if not at the first step
+   */
   const handlePrevStep = () => {
     if (onStepChange && currentStepIndex > 0) {
       onStepChange(currentStepIndex - 1);
     }
   };
   
+  /**
+   * Navigates to the next step
+   * 
+   * @function handleNextStep
+   * @description Calls onStepChange with the next step index if not at the last step
+   */
   const handleNextStep = () => {
     if (onStepChange && testResult && currentStepIndex < testResult.stepResults.length - 1) {
       onStepChange(currentStepIndex + 1);

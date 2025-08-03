@@ -1,12 +1,26 @@
+/**
+ * @fileoverview Main application component that sets up the routing and layout structure
+ * for the Tramoya visual test builder application.
+ * @module App
+ */
+
 import React from 'react';
 import { Routes, Route, Link } from 'react-router-dom';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
-// Import pages (to be created)
+/**
+ * Lazy-loaded component imports to improve initial load performance
+ */
 const TestList = React.lazy(() => import('./components/TestList'));
 const TestBuilder = React.lazy(() => import('./components/TestBuilder'));
 
+/**
+ * Main application component that renders the application layout and routes.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered App component with header, main content area, footer, and toast notifications
+ */
 const App: React.FC = () => {
   return (
     <div className="app">
@@ -56,7 +70,12 @@ const App: React.FC = () => {
   );
 };
 
-// Simple 404 page
+/**
+ * 404 Not Found page component displayed when a user navigates to a non-existent route.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered NotFound component with error message and home link
+ */
 const NotFound: React.FC = () => {
   return (
     <div className="text-center py-10">

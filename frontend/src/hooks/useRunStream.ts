@@ -4,7 +4,9 @@ import {TestResult, TestStatus, StepStatus, Screenshot} from '../types';
 import {verifyImageUrl} from '../utils/debug';
 
 /**
- * Event data structure received from the Server-Sent Events stream
+ * Event data structure received from the Server-Sent Events stream.
+ * This interface defines the shape of events coming from the backend test runner.
+ * 
  * @interface RunStreamEvent
  * @property {string} type - The type of event (e.g., 'step-start', 'frame', 'step-end', 'run-finished')
  * @property {string} runId - The unique identifier for the test run
@@ -32,6 +34,15 @@ interface RunStreamEvent {
  * This hook establishes a connection to the server's event stream for a specific test run,
  * processes incoming events (screenshots, step status updates, etc.), and maintains the current
  * state of the test run in real-time.
+ * 
+ * The hook handles various event types including:
+ * - step-start: When a test step begins execution
+ * - frame: When a new screenshot is captured
+ * - step-end: When a test step completes
+ * - run-finished: When the entire test run completes
+ * - test-result: When a complete test result is available
+ * - connected: When the SSE connection is established
+ * - step: When a step status changes
  * 
  * @param {string | null} runId - The unique identifier for the test run to subscribe to, or null if no subscription is needed
  * @param {TestResult | null} [initialResult] - Optional initial test result state to use
@@ -71,9 +82,19 @@ export const useRunStream = (
     initialResult?: TestResult | null,
     testId?: string | null
 ) => {
+    /**
+     * State variable that holds the current test result data.
+     * This is updated as events are received from the server.
+     */
     const [testResult, setTestResult] = useState<TestResult | null>(initialResult || null);
 
-    // Add effect to log testResult changes and ensure required fields are set
+    /**
+     * Effect hook that ensures the test result has all required fields and logs changes.
+     * This effect runs whenever the testResult state changes and performs validation and cleanup:
+     * - Adds missing endTime for completed tests
+     * - Ensures videoUrl and traceUrl are never undefined
+     * - Generates summary data if missing
+     */
     useEffect(() => {
         if (testResult) {
             let needsUpdate = false;
@@ -161,15 +182,41 @@ export const useRunStream = (
                 `${step.stepId}: ${step.status} (${step.screenshots.length} screenshots)`).join(', '));
         }
     }, [testResult]);
+
+    /**
+     * State variable that indicates whether the SSE connection is being established.
+     * True during the connection process, false once connected or if an error occurs.
+     */
     const [loading, setLoading] = useState(false);
+
+    /**
+     * State variable that holds any error message if the SSE connection fails.
+     * Null if there is no error.
+     */
     const [error, setError] = useState<string | null>(null);
+
+    /**
+     * State variable that indicates whether the SSE connection is currently active.
+     * True when connected, false when disconnected or not yet connected.
+     */
     const [connected, setConnected] = useState(false);
 
-    // Log connected state changes
+    /**
+     * Effect hook that logs changes to the connection state.
+     * This helps with debugging connection issues.
+     */
     useEffect(() => {
         console.log(`SSE connection state changed: connected=${connected}, runId=${runId}`);
     }, [connected, runId]);
 
+    /**
+     * Main effect hook that establishes and manages the SSE connection.
+     * This effect:
+     * 1. Creates an EventSource connection to the server
+     * 2. Sets up event listeners for different event types
+     * 3. Processes incoming events and updates the test result state
+     * 4. Handles connection errors and cleanup
+     */
     useEffect(() => {
         if (!runId) {
             console.log('No runId provided, skipping SSE connection');
@@ -209,7 +256,15 @@ export const useRunStream = (
                 }
             };
 
-            // Handle step-start events
+            /**
+             * Event handler for 'step-start' events.
+             * 
+             * This handler processes events that indicate a test step has started execution.
+             * It updates the corresponding step's status to RUNNING and ensures the overall
+             * test status is set to RUNNING.
+             * 
+             * @param {any} event - The event object from the EventSource
+             */
             eventSource.addEventListener('step-start', (event: any) => {
                 try {
                     const data = JSON.parse(event.data) as RunStreamEvent;
@@ -253,13 +308,22 @@ export const useRunStream = (
                 }
             });
 
-            // Handle frame events (screenshots)
+            /**
+             * Event handler for 'frame' events.
+             * 
+             * This handler processes events that contain screenshot data from the test execution.
+             * It creates or updates the test result with the new screenshot, ensuring all required
+             * fields are properly set. If this is the first event received, it will initialize
+             * the test result structure.
+             * 
+             * @param {any} event - The event object from the EventSource
+             */
             eventSource.addEventListener('frame', (event: any) => {
                 try {
                     const data = JSON.parse(event.data) as RunStreamEvent;
                     console.log('Received frame event:', data);
 
-                    /* --------------- валидация входных даных ---------------- */
+                    /* --------------- Input validation ---------------- */
                     if (data.runId !== runId) {
                         console.log(
                             `Ignoring frame event for unrelated runId: ${data.runId} (we want ${runId})`,
@@ -272,9 +336,9 @@ export const useRunStream = (
                     }
                     console.log(`Processing frame event for runId: ${data.runId}`);
 
-                    /* --------------- обновляем state ------------------------ */
+                    /* --------------- Update state ------------------------ */
                     setTestResult(prevResult => {
-                        /* 1. базовый скелет результата, если его ещё нет */
+                        /* 1. Create base result skeleton if it doesn't exist yet */
                         const baseResult: TestResult = prevResult ?? {
                             id: data.runId,
                             testId: testId || data.runId,    // Use provided testId or fallback to runId
@@ -286,7 +350,7 @@ export const useRunStream = (
                             traceUrl: '',  // Initialize with empty string instead of undefined
                         };
 
-                        /* 2. находим/создаём запись шага */
+                        /* 2. Find or create step record */
                         const updatedStepResults = [...baseResult.stepResults];
                         let stepIndex = updatedStepResults.findIndex(
                             s => s.stepId === data.stepId,
@@ -297,12 +361,12 @@ export const useRunStream = (
                                 stepId: data.stepId,
                                 status: StepStatus.RUNNING,
                                 screenshots: [],
-                                logs: [],                       // 🔹 обязательное поле
+                                logs: [],                       // Required field
                             });
                             stepIndex = updatedStepResults.length - 1;
                         }
 
-                        /* 3. формируем объект скриншота */
+                        /* 3. Create screenshot object */
                         const absoluteUrl = data.url!.startsWith('http')
                             ? data.url!
                             : `${window.location.origin}${data.url!}`;
@@ -311,18 +375,18 @@ export const useRunStream = (
                             id: `screenshot_${Date.now()}`,
                             stepId: data.stepId,
                             timestamp: new Date(data.ts).toISOString(),
-                            path: data.url!,                 // 🔹 non-null assertion
+                            path: data.url!,                 // Non-null assertion
                             url: absoluteUrl,
                         };
 
-                        // проверяем, что картинка действительно отдается
+                        // Verify the image URL is accessible
                         verifyImageUrl('FrameEvent', absoluteUrl, {
                             stepId: data.stepId,
                             runId: data.runId,
                             eventType: 'frame',
                         });
 
-                        /* 4. кладём скриншот в шаг */
+                        /* 4. Add screenshot to step */
                         updatedStepResults[stepIndex] = {
                             ...updatedStepResults[stepIndex],
                             screenshots: [
@@ -331,7 +395,7 @@ export const useRunStream = (
                             ],
                         };
 
-                        /* 5. формируем новый state */
+                        /* 5. Create new state */
                         const result: TestResult = {
                             ...baseResult,
                             stepResults: updatedStepResults,
@@ -357,7 +421,15 @@ export const useRunStream = (
                 }
             });
 
-            // Handle step-end events
+            /**
+             * Event handler for 'step-end' events.
+             * 
+             * This handler processes events that indicate a test step has completed execution.
+             * It updates the corresponding step's status to the final status provided in the event
+             * (e.g., PASSED, FAILED, SKIPPED, ERROR).
+             * 
+             * @param {any} event - The event object from the EventSource
+             */
             eventSource.addEventListener('step-end', (event: any) => {
                 try {
                     const data = JSON.parse(event.data) as RunStreamEvent;
@@ -400,7 +472,16 @@ export const useRunStream = (
                 }
             });
 
-            // Handle run-finished events
+            /**
+             * Event handler for 'run-finished' events.
+             * 
+             * This handler processes events that indicate the entire test run has completed.
+             * It updates the test result with the final status, video URL, trace URL, and end time.
+             * It also handles duplicate run-finished events by ignoring them if the test already
+             * has a final status.
+             * 
+             * @param {any} event - The event object from the EventSource
+             */
             eventSource.addEventListener('run-finished', (event: any) => {
                 try {
                     const data = JSON.parse(event.data) as RunStreamEvent;
@@ -439,7 +520,17 @@ export const useRunStream = (
                 }
             });
 
-            // Handle test-result events
+            /**
+             * Event handler for 'test-result' events.
+             * 
+             * This handler processes events that contain a complete test result object.
+             * Unlike other events that update specific parts of the test result, this event
+             * replaces the entire test result state with the provided data.
+             * 
+             * Note: test-result events use 'id' instead of 'runId' for identification.
+             * 
+             * @param {any} event - The event object from the EventSource
+             */
             eventSource.addEventListener('test-result', (event: any) => {
                 try {
                     console.log('Received test-result event:', event.data);
@@ -459,7 +550,15 @@ export const useRunStream = (
                 }
             });
 
-            // Handle connected events
+            /**
+             * Event handler for 'connected' events.
+             * 
+             * This handler processes events that indicate the SSE connection has been established.
+             * It validates that the event is for the correct runId but doesn't update any state
+             * as the connection state is managed by the onopen handler.
+             * 
+             * @param {any} event - The event object from the EventSource
+             */
             eventSource.addEventListener('connected', (event: any) => {
                 try {
                     console.log('Received connected event:', event.data);
@@ -477,7 +576,15 @@ export const useRunStream = (
                 }
             });
 
-            // Handle step events
+            /**
+             * Event handler for 'step' events.
+             * 
+             * This handler processes events that update a step's status and potentially add a screenshot.
+             * It's similar to step-end but can be used for any status update during the step's lifecycle.
+             * If the event includes a URL, it will add a new screenshot to the step's collection.
+             * 
+             * @param {any} event - The event object from the EventSource
+             */
             eventSource.addEventListener('step', (event: any) => {
                 try {
                     const data = JSON.parse(event.data) as RunStreamEvent;
@@ -542,7 +649,20 @@ export const useRunStream = (
                 }
             });
 
-            // Handle generic message events for new event types
+            /**
+             * Generic message event handler.
+             * 
+             * This handler processes any events that don't have a specific event listener.
+             * It handles:
+             * 1. Special [DONE] messages that indicate the stream should be closed
+             * 2. Generic 'step' events (both lowercase and uppercase for backward compatibility)
+             * 3. Generic 'run-finished' events (both lowercase and uppercase for backward compatibility)
+             * 
+             * This provides a fallback mechanism for handling events that might be sent with
+             * different formats or types than expected.
+             * 
+             * @param {MessageEvent} e - The message event from the EventSource
+             */
             eventSource.onmessage = (e) => {
                 try {
                     // Check for special [DONE] message
@@ -664,6 +784,15 @@ export const useRunStream = (
         };
     }, [runId]);
 
+    /**
+     * Returns an object containing the current state of the test run stream.
+     * 
+     * @returns {Object} An object with the following properties:
+     *   - testResult: The current state of the test result, updated in real-time as events are received
+     *   - loading: Boolean indicating if the connection is being established
+     *   - error: Error message if connection failed, or null if no error
+     *   - connected: Boolean indicating if the SSE connection is currently active
+     */
     return {
         testResult,
         loading,

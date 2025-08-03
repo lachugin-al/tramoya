@@ -1,6 +1,15 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
+/**
+ * Props for the TestHeader component
+ * 
+ * @interface TestHeaderProps
+ * @property {string} testName - The current name of the test
+ * @property {function} onTestNameChange - Callback function when the test name is changed
+ * @property {function} onSave - Callback function to save the test
+ * @property {boolean} saving - Whether the test is currently being saved
+ */
 interface TestHeaderProps {
   testName: string;
   onTestNameChange: (name: string) => void;
@@ -8,12 +17,36 @@ interface TestHeaderProps {
   saving: boolean;
 }
 
+/**
+ * TestHeader Component
+ * 
+ * @component
+ * @description Renders the header section of the test builder interface.
+ * Includes a back button to return to the tests list, an input field for editing
+ * the test name, and a save button.
+ * 
+ * @param {TestHeaderProps} props - Component props
+ * @returns {JSX.Element} The rendered header component
+ * 
+ * @example
+ * ```tsx
+ * <TestHeader
+ *   testName="My Test"
+ *   onTestNameChange={handleNameChange}
+ *   onSave={handleSave}
+ *   saving={isSaving}
+ * />
+ * ```
+ */
 const TestHeader: React.FC<TestHeaderProps> = ({
   testName,
   onTestNameChange,
   onSave,
   saving
 }) => {
+  /**
+   * Navigation function from React Router
+   */
   const navigate = useNavigate();
 
   return (

@@ -3,11 +3,49 @@ import { MinioService } from '../services/minio-service';
 import { RedisService } from '../services/redis-service';
 import { QueueService } from '../services/queue-service';
 
+/**
+ * Logger instance for service utilities
+ * @private
+ */
 const logger = createLogger('service-utils');
 
 /**
- * Initialize common services used by both gateway and runner
- * @returns Initialized services
+ * Initializes and configures all common services required by the application
+ * This function handles the initialization of MinIO, Redis, and Queue services,
+ * ensuring they are properly configured and ready to use. It also ensures that
+ * required resources like MinIO buckets exist.
+ * 
+ * @returns {Promise<{
+ *   minioService: MinioService,
+ *   redisService: RedisService,
+ *   queueService: QueueService
+ * }>} Object containing initialized service instances
+ * 
+ * @throws {Error} If any service fails to initialize properly
+ * 
+ * @example
+ * // In your application startup code:
+ * import { initializeServices } from './utils/service-utils';
+ * 
+ * async function startApp() {
+ *   try {
+ *     const { minioService, redisService, queueService } = await initializeServices();
+ *     // Services are now ready to use
+ *     // Continue with application startup...
+ *   } catch (error) {
+ *     console.error('Failed to initialize services:', error);
+ *     process.exit(1);
+ *   }
+ * }
+ * 
+ * @description
+ * This function initializes services with the following configuration:
+ * - MinIO: Uses MINIO_ENDPOINT and MINIO_BUCKET environment variables
+ * - Redis: Uses REDIS_HOST and REDIS_PORT environment variables
+ * - Queue: Creates a queue named 'tramoya-queue'
+ * 
+ * The function logs detailed timing information for each initialization step
+ * and provides comprehensive error handling.
  */
 export async function initializeServices() {
   const startTime = Date.now();
@@ -80,9 +118,41 @@ export async function initializeServices() {
 }
 
 /**
- * Gracefully shut down services
- * @param queueService Queue service instance
- * @param redisService Redis service instance
+ * Gracefully shuts down all initialized services
+ * This function ensures that all services are properly closed before application exit,
+ * preventing resource leaks, data corruption, and allowing for clean process termination.
+ * 
+ * @param {QueueService} queueService - The Queue service instance to shut down
+ * @param {RedisService} redisService - The Redis service instance to shut down
+ * @returns {Promise<void>} A promise that resolves when all services are shut down
+ * @throws {Error} If any service fails to shut down properly
+ * 
+ * @example
+ * // In your application shutdown code:
+ * import { shutdownServices } from './utils/service-utils';
+ * 
+ * async function stopApp() {
+ *   try {
+ *     await shutdownServices(queueService, redisService);
+ *     console.log('Application shut down successfully');
+ *     process.exit(0);
+ *   } catch (error) {
+ *     console.error('Error during shutdown:', error);
+ *     process.exit(1);
+ *   }
+ * }
+ * 
+ * // Handle termination signals
+ * process.on('SIGTERM', stopApp);
+ * process.on('SIGINT', stopApp);
+ * 
+ * @description
+ * The function performs the following shutdown sequence:
+ * 1. Closes the Queue service connections first
+ * 2. Closes the Redis service connections next
+ * 
+ * The function logs detailed timing information for each shutdown step
+ * and provides comprehensive error handling.
  */
 export async function shutdownServices(
   queueService: QueueService,

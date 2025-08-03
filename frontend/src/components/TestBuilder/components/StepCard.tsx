@@ -2,6 +2,13 @@ import React, { useRef, useState, useEffect } from 'react';
 import { useDrag, useDrop, DropTargetMonitor } from 'react-dnd';
 import { TestStep, TestStepType } from '../../../types';
 
+/**
+ * Icons for each test step type
+ * 
+ * @constant
+ * @type {Record<TestStepType, string>}
+ * @description Emoji icons representing each type of test step
+ */
 const StepIcons: Record<TestStepType, string> = {
   [TestStepType.NAVIGATE]: '🌐',
   [TestStepType.INPUT]: '⌨️',
@@ -13,6 +20,13 @@ const StepIcons: Record<TestStepType, string> = {
   [TestStepType.SCREENSHOT]: '📷',
 };
 
+/**
+ * Display labels for each test step type
+ * 
+ * @constant
+ * @type {Record<TestStepType, string>}
+ * @description Human-readable labels for each type of test step
+ */
 const StepLabels: Record<TestStepType, string> = {
   [TestStepType.NAVIGATE]: 'Navigate',
   [TestStepType.INPUT]: 'Type text',
@@ -24,6 +38,21 @@ const StepLabels: Record<TestStepType, string> = {
   [TestStepType.SCREENSHOT]: 'Screenshot',
 };
 
+/**
+ * Props for the StepCard component
+ * 
+ * @interface StepCardProps
+ * @property {TestStep} step - The test step data to display and edit
+ * @property {number} index - The index of the step in the list
+ * @property {boolean} [isEditing=false] - Whether the step is currently being edited
+ * @property {function} onEdit - Callback function when the edit button is clicked
+ * @property {function} onDelete - Callback function when the delete button is clicked
+ * @property {function} onSave - Callback function when the step is saved
+ * @property {function} onCancel - Callback function when editing is canceled
+ * @property {function} [onMoveStep] - Callback function when the step is moved via drag and drop
+ * @property {function} [onMoveUp] - Callback function when the step is moved up
+ * @property {function} [onMoveDown] - Callback function when the step is moved down
+ */
 interface StepCardProps {
   step: TestStep;
   index: number;
@@ -37,16 +66,55 @@ interface StepCardProps {
   onMoveDown?: () => void;
 }
 
+/**
+ * Interface for drag and drop item data
+ * 
+ * @interface DragItem
+ * @property {string} type - The type of the draggable item
+ * @property {number} index - The index of the item in the list
+ * @property {string} id - The unique identifier of the item
+ */
 interface DragItem {
   type: string;
   index: number;
   id: string;
 }
 
+/**
+ * Interface for drop target collected props
+ * 
+ * @interface DropCollectedProps
+ * @property {string|symbol|null} handlerId - The handler ID for the drop target
+ */
 interface DropCollectedProps {
   handlerId: string | symbol | null;
 }
 
+/**
+ * StepCard Component
+ * 
+ * @component
+ * @description Renders a single test step card with view and edit modes.
+ * Supports drag and drop reordering, editing, and deletion of steps.
+ * The component displays different fields based on the step type.
+ * 
+ * @param {StepCardProps} props - Component props
+ * @returns {JSX.Element} The rendered step card
+ * 
+ * @example
+ * ```tsx
+ * <StepCard
+ *   step={step}
+ *   index={index}
+ *   isEditing={isEditing}
+ *   onEdit={handleEdit}
+ *   onDelete={handleDelete}
+ *   onSave={handleSave}
+ *   onCancel={handleCancel}
+ *   onMoveStep={handleMoveStep}
+ * />
+ * ```
+ */
 const StepCard: React.FC<StepCardProps> = ({
                                              step,
                                              index,
@@ -59,9 +127,19 @@ const StepCard: React.FC<StepCardProps> = ({
                                              onMoveUp,
                                              onMoveDown
                                            }) => {
+  /**
+   * Reference to the DOM element for drag and drop
+   */
   const ref = useRef<HTMLDivElement>(null);
+  
+  /**
+   * State for the editable copy of the step
+   */
   const [editableStep, setEditableStep] = useState<TestStep>(step);
 
+  /**
+   * Effect to update the editable step when the props change
+   */
   useEffect(() => {
     setEditableStep(step);
   }, [step, isEditing]);

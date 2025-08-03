@@ -28,18 +28,41 @@ import {
   setLogLevel 
 } from './utils/logger';
 
-// Create loggers for different modules
+/**
+ * Create loggers for different modules to demonstrate module-specific logging
+ * 
+ * @const {Object} mainLogger - Logger for the main test-logging component
+ */
 const mainLogger = createLogger('test-logging');
+
+/**
+ * @const {Object} uiLogger - Logger for UI-related events
+ */
 const uiLogger = createLogger('test-ui');
+
+/**
+ * @const {Object} apiLogger - Logger for API-related events
+ */
 const apiLogger = createLogger('test-api');
 
-// Configure the logger
+/**
+ * Configure the logger with test-specific settings
+ * Set to TRACE level to demonstrate all log levels
+ */
 configureLogger({
   level: LogLevel.TRACE, // Set to TRACE to see all logs
   includeTimestamp: true,
   applicationName: 'tramoya-frontend-test'
 });
 
+/**
+ * Test component that demonstrates the frontend logging system capabilities.
+ * This component shows various logging features including different log levels,
+ * performance measurement, error handling, and grouped logs.
+ * 
+ * @component
+ * @returns {JSX.Element} The rendered TestLogging component with interactive controls
+ */
 const TestLogging: React.FC = () => {
   const [count, setCount] = useState(0);
   const [logLevel, setLoggerLevel] = useState<LogLevel>(LogLevel.TRACE);
@@ -81,7 +104,14 @@ const TestLogging: React.FC = () => {
     };
   }, []);
 
-  // Simulate API calls with logging
+  /**
+   * Simulates API calls with success and failure scenarios to demonstrate logging patterns.
+   * This function shows how to log API requests, responses, timing information, and errors.
+   * 
+   * @async
+   * @function simulateApiCalls
+   * @returns {Promise<void>} A promise that resolves when all simulated API calls are complete
+   */
   const simulateApiCalls = async () => {
     apiLogger.info('Starting API call simulation');
 
@@ -126,20 +156,39 @@ const TestLogging: React.FC = () => {
     }
   };
 
-  // Handle button click
+  /**
+   * Handles the button click event to increment the counter.
+   * Demonstrates logging UI interactions with contextual data.
+   * 
+   * @function handleClick
+   * @returns {void}
+   */
   const handleClick = () => {
     uiLogger.debug('Button clicked', { count });
     setCount(prevCount => prevCount + 1);
   };
 
-  // Handle changing log level
+  /**
+   * Changes the current log level for the application.
+   * Demonstrates how to dynamically adjust logging verbosity.
+   * 
+   * @function handleLogLevelChange
+   * @param {LogLevel} level - The new log level to set
+   * @returns {void}
+   */
   const handleLogLevelChange = (level: LogLevel) => {
     uiLogger.info(`Changing log level to ${LogLevel[level]}`);
     setLoggerLevel(level);
     setLogLevel(level);
   };
 
-  // Simulate an error
+  /**
+   * Simulates an error condition and demonstrates error logging.
+   * Shows how to properly catch, log, and handle errors.
+   * 
+   * @function simulateError
+   * @returns {void}
+   */
   const simulateError = () => {
     uiLogger.debug('Simulating error');
     try {
@@ -155,13 +204,25 @@ const TestLogging: React.FC = () => {
     }
   };
 
-  // Clear error
+  /**
+   * Clears the current error state.
+   * Demonstrates logging state changes and error recovery.
+   * 
+   * @function clearError
+   * @returns {void}
+   */
   const clearError = () => {
     uiLogger.debug('Clearing error');
     setError(null);
   };
 
-  // Log grouped messages
+  /**
+   * Demonstrates grouped log messages for related information.
+   * Shows how to organize logs for better readability in the console.
+   * 
+   * @function logGroupedMessages
+   * @returns {void}
+   */
   const logGroupedMessages = () => {
     uiLogger.group('Button click details');
     uiLogger.debug('Button component', { id: 'test-button' });

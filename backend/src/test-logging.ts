@@ -63,7 +63,21 @@ setTimeout(() => {
   testRequestIdMiddleware();
 }, 1000);
 
-// Function to test request ID middleware
+/**
+ * Tests the request ID middleware functionality by creating a simple Express server,
+ * adding the middleware, and making a test request.
+ * 
+ * This function:
+ * 1. Creates an Express application
+ * 2. Adds the request ID middleware
+ * 3. Sets up a test route
+ * 4. Starts the server on a random port
+ * 5. Makes a test request to the server
+ * 6. Logs the response
+ * 7. Closes the server when done
+ * 
+ * @returns {void}
+ */
 function testRequestIdMiddleware() {
   mainLogger.info('Testing request ID middleware');
   

@@ -14,7 +14,16 @@ const testScenarios: Record<string, TestScenario> = {};
 const testResults: Record<string, TestResult> = {};
 
 /**
- * Create test routes
+ * Creates and configures Express router for test scenario management
+ * 
+ * This router provides endpoints for creating, retrieving, updating, and deleting test scenarios,
+ * as well as executing tests and managing test results. It subscribes to Redis events to update
+ * test results in real-time.
+ * 
+ * @param {MinioService} minioService - Service for object storage operations
+ * @param {RedisService} redisService - Service for Redis operations and pub/sub
+ * @param {QueueService} queueService - Service for job queue management
+ * @returns {Router} Express router configured with test management endpoints
  */
 export default function testRoutes(
   minioService: MinioService,
@@ -23,9 +32,28 @@ export default function testRoutes(
 ): Router {
   const router = express.Router();
   
-  // Subscribe to test events to update testResults
+  /**
+   * Subscribes to Redis test events to update test results in real-time
+   * 
+   * This subscription listens for test execution events published to Redis and updates
+   * the corresponding test results in memory. It handles two main event types:
+   * - RUN_FINISHED: Updates the overall test result status, end time, and artifact URLs
+   * - STEP: Updates individual step statuses and adds screenshots to step results
+   * 
+   * The subscription is set up when the router is created and remains active for the
+   * lifetime of the server. Errors during subscription or event processing are logged
+   * but don't crash the application.
+   * 
+   * @private
+   */
   try {
     redisService.subscribe('test-events', (message: string) => {
+      /**
+       * Processes incoming Redis test events
+       * 
+       * @private
+       * @param {string} message - JSON string containing the event data
+       */
       try {
         const event = JSON.parse(message);
         if (event.type === 'RUN_FINISHED' && event.runId && testResults[event.runId]) {
@@ -64,7 +92,11 @@ export default function testRoutes(
 
   /**
    * GET /tests
-   * Get all test scenarios
+   * Retrieves all test scenarios
+   * 
+   * @route GET /tests
+   * @returns {TestScenario[]} Array of all test scenarios
+   * @throws {500} If there's an error retrieving test scenarios
    */
   router.get('/', (req, res) => {
     try {
@@ -79,7 +111,11 @@ export default function testRoutes(
   
   /**
    * GET /tests/results
-   * Get all test results
+   * Retrieves all test results
+   * 
+   * @route GET /tests/results
+   * @returns {TestResult[]} Array of all test results
+   * @throws {500} If there's an error retrieving test results
    */
   router.get('/results', (req, res) => {
     try {
@@ -94,7 +130,13 @@ export default function testRoutes(
   
   /**
    * GET /tests/results/:id
-   * Get a specific test result by ID
+   * Retrieves a specific test result by ID
+   * 
+   * @route GET /tests/results/:id
+   * @param {string} req.params.id - The ID of the test result to retrieve
+   * @returns {TestResult} The requested test result
+   * @throws {404} If the test result is not found
+   * @throws {500} If there's an error retrieving the test result
    */
   router.get('/results/:id', (req, res) => {
     try {
@@ -116,7 +158,13 @@ export default function testRoutes(
 
   /**
    * GET /tests/:id
-   * Get a specific test scenario by ID
+   * Retrieves a specific test scenario by ID
+   * 
+   * @route GET /tests/:id
+   * @param {string} req.params.id - The ID of the test scenario to retrieve
+   * @returns {TestScenario} The requested test scenario
+   * @throws {404} If the test scenario is not found
+   * @throws {500} If there's an error retrieving the test scenario
    */
   router.get('/:id', (req, res) => {
     try {
@@ -138,7 +186,16 @@ export default function testRoutes(
 
   /**
    * POST /tests
-   * Create a new test scenario
+   * Creates a new test scenario
+   * 
+   * @route POST /tests
+   * @param {Object} req.body - The test scenario data
+   * @param {string} req.body.name - The name of the test scenario (required)
+   * @param {string} [req.body.description] - The description of the test scenario
+   * @param {TestStep[]} [req.body.steps] - Array of test steps
+   * @returns {TestScenario} The created test scenario
+   * @throws {400} If required fields are missing or invalid
+   * @throws {500} If there's an error creating the test scenario
    */
   router.post('/', (req, res) => {
     try {
@@ -175,7 +232,18 @@ export default function testRoutes(
 
   /**
    * PUT /tests/:id
-   * Update an existing test scenario
+   * Updates an existing test scenario
+   * 
+   * @route PUT /tests/:id
+   * @param {string} req.params.id - The ID of the test scenario to update
+   * @param {Object} req.body - The updated test scenario data
+   * @param {string} req.body.name - The name of the test scenario (required)
+   * @param {string} [req.body.description] - The description of the test scenario
+   * @param {TestStep[]} [req.body.steps] - Array of test steps
+   * @returns {TestScenario} The updated test scenario
+   * @throws {404} If the test scenario is not found
+   * @throws {400} If required fields are missing or invalid
+   * @throws {500} If there's an error updating the test scenario
    */
   router.put('/:id', (req, res) => {
     try {
@@ -226,7 +294,13 @@ export default function testRoutes(
 
   /**
    * DELETE /tests/:id
-   * Delete a test scenario
+   * Deletes a test scenario by ID
+   * 
+   * @route DELETE /tests/:id
+   * @param {string} req.params.id - The ID of the test scenario to delete
+   * @returns {204} No content on successful deletion
+   * @throws {404} If the test scenario is not found
+   * @throws {500} If there's an error deleting the test scenario
    */
   router.delete('/:id', (req, res) => {
     try {
@@ -251,7 +325,16 @@ export default function testRoutes(
 
   /**
    * POST /tests/:id/execute
-   * Execute a test scenario
+   * Executes a test scenario by ID
+   * 
+   * @route POST /tests/:id/execute
+   * @param {string} req.params.id - The ID of the test scenario to execute
+   * @returns {Object} Object containing message, resultId, and initial result object
+   * @returns {string} returns.message - Success message
+   * @returns {string} returns.resultId - The ID of the created test result
+   * @returns {TestResult} returns.result - The initial test result object with RUNNING status
+   * @throws {404} If the test scenario is not found
+   * @throws {500} If there's an error executing the test
    */
   router.post('/:id/execute', async (req, res) => {
     const { id } = req.params;
@@ -305,7 +388,12 @@ export default function testRoutes(
 
   /**
    * GET /tests/results
-   * Get all test results
+   * Retrieves all test results
+   * 
+   * @route GET /tests/results
+   * @returns {TestResult[]} Array of all test results
+   * @throws {500} If there's an error retrieving test results
+   * @deprecated This is a duplicate route handler. Consider removing it in future updates.
    */
   router.get('/results', (req, res) => {
     try {
@@ -320,7 +408,14 @@ export default function testRoutes(
 
   /**
    * GET /tests/results/:id
-   * Get a specific test result by ID
+   * Retrieves a specific test result by ID
+   * 
+   * @route GET /tests/results/:id
+   * @param {string} req.params.id - The ID of the test result to retrieve
+   * @returns {TestResult} The requested test result
+   * @throws {404} If the test result is not found
+   * @throws {500} If there's an error retrieving the test result
+   * @deprecated This is a duplicate route handler. Consider removing it in future updates.
    */
   router.get('/results/:id', (req, res) => {
     try {
@@ -342,7 +437,13 @@ export default function testRoutes(
 
   /**
    * DELETE /tests/results/:id
-   * Delete a test result
+   * Deletes a test result by ID
+   * 
+   * @route DELETE /tests/results/:id
+   * @param {string} req.params.id - The ID of the test result to delete
+   * @returns {204} No content on successful deletion
+   * @throws {404} If the test result is not found
+   * @throws {500} If there's an error deleting the test result
    */
   router.delete('/results/:id', (req, res) => {
     try {

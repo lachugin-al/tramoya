@@ -4,7 +4,13 @@ import { toast } from 'react-toastify';
 import apiService from '../../services/api';
 import { TestResult, TestStatus, StepStatus, StepResult, TestScenario } from '../../types';
 
-// Status badge colors
+/**
+ * CSS class mappings for test status badges
+ * 
+ * @constant
+ * @type {Record<TestStatus | StepStatus, string>}
+ * @description Maps test and step statuses to their corresponding CSS classes for styling
+ */
 const statusColors = {
   [TestStatus.PENDING]: 'bg-gray-200 text-gray-800',
   [TestStatus.RUNNING]: 'bg-blue-200 text-blue-800',
@@ -14,7 +20,13 @@ const statusColors = {
   [StepStatus.SKIPPED]: 'bg-purple-200 text-purple-800',
 };
 
-// Status icons
+/**
+ * Emoji icons for test statuses
+ * 
+ * @constant
+ * @type {Record<TestStatus | StepStatus, string>}
+ * @description Maps test and step statuses to their corresponding emoji icons for visual representation
+ */
 const statusIcons = {
   [TestStatus.PENDING]: '⏳',
   [TestStatus.RUNNING]: '🔄',
@@ -24,7 +36,18 @@ const statusIcons = {
   [StepStatus.SKIPPED]: '⏭️',
 };
 
-// Format duration
+/**
+ * Formats a duration in milliseconds to a human-readable string
+ * 
+ * @function formatDuration
+ * @param {number} milliseconds - The duration in milliseconds to format
+ * @returns {string} A formatted string representation of the duration (e.g., "500ms", "2.500s", "1m 30s")
+ * 
+ * @example
+ * formatDuration(500) // "500ms"
+ * formatDuration(2500) // "2.500s"
+ * formatDuration(90000) // "1m 30s"
+ */
 const formatDuration = (milliseconds: number) => {
   if (milliseconds < 1000) {
     return `${milliseconds}ms`;
@@ -43,18 +66,69 @@ const formatDuration = (milliseconds: number) => {
   return `${minutes}m ${secs}s`;
 };
 
+/**
+ * TestResults Component
+ * 
+ * @component
+ * @description Displays detailed results of a test execution, including overall status,
+ * summary statistics, and individual step results. The component handles various states
+ * including loading, error, and not found states. For running tests, it provides a refresh
+ * button to get the latest results.
+ * 
+ * @example
+ * ```tsx
+ * <TestResults />
+ * ```
+ */
 const TestResults: React.FC = () => {
+  /**
+   * Test result ID extracted from URL parameters
+   */
   const { id } = useParams<{ id: string }>();
+  
+  /**
+   * Navigation function from React Router
+   */
   const navigate = useNavigate();
   
+  /**
+   * State containing the test result data
+   */
   const [result, setResult] = useState<TestResult | null>(null);
+  
+  /**
+   * State containing the test scenario data
+   */
   const [test, setTest] = useState<TestScenario | null>(null);
+  
+  /**
+   * State indicating whether data is currently being loaded
+   */
   const [loading, setLoading] = useState(true);
+  
+  /**
+   * State containing error message if data loading fails
+   */
   const [error, setError] = useState<string | null>(null);
+  
+  /**
+   * State for storing the polling interval ID for automatic refreshes
+   */
   const [pollingInterval, setPollingInterval] = useState<NodeJS.Timeout | null>(null);
+  
+  /**
+   * State tracking the ID of the currently expanded step
+   */
   const [activeStep, setActiveStep] = useState<string | null>(null);
   
-  // Fetch result on component mount
+  /**
+   * Effect hook to fetch test result when component mounts
+   * 
+   * @effect
+   * @description Fetches the test result data when the component mounts and
+   * cleans up any polling intervals when the component unmounts
+   * @dependencies [id]
+   */
   useEffect(() => {
     if (id) {
       fetchResult(id);
@@ -68,7 +142,15 @@ const TestResults: React.FC = () => {
     };
   }, [id]);
   
-  // Fetch result from API
+  /**
+   * Fetches test result data from the API
+   * 
+   * @async
+   * @function fetchResult
+   * @param {string} resultId - The ID of the test result to fetch
+   * @returns {Promise<void>}
+   * @description Retrieves the test result and associated test scenario data from the backend API
+   */
   const fetchResult = async (resultId: string) => {
     try {
       setLoading(true);
@@ -101,7 +183,14 @@ const TestResults: React.FC = () => {
     }
   };
   
-  // Toggle step details
+  /**
+   * Toggles the expanded/collapsed state of a step
+   * 
+   * @function toggleStep
+   * @param {string} stepId - The ID of the step to toggle
+   * @returns {void}
+   * @description Expands the step if it's currently collapsed, or collapses it if it's currently expanded
+   */
   const toggleStep = (stepId: string) => {
     setActiveStep(activeStep === stepId ? null : stepId);
   };
@@ -266,7 +355,16 @@ const TestResults: React.FC = () => {
   );
 };
 
-// Step result item component
+/**
+ * Props for the StepResultItem component
+ * 
+ * @interface StepResultItemProps
+ * @property {StepResult} stepResult - The result data for a single test step
+ * @property {number} index - The index of the step in the test sequence
+ * @property {TestScenario | null} test - The test scenario data, or null if not available
+ * @property {boolean} isActive - Whether the step details are currently expanded
+ * @property {function} onToggle - Callback function to toggle the expanded/collapsed state
+ */
 interface StepResultItemProps {
   stepResult: StepResult;
   index: number;
@@ -275,6 +373,16 @@ interface StepResultItemProps {
   onToggle: () => void;
 }
 
+/**
+ * StepResultItem Component
+ * 
+ * @component
+ * @description Renders a single test step result with expandable details.
+ * When expanded, shows step details, error information, screenshots, and logs.
+ * 
+ * @param {StepResultItemProps} props - Component props
+ * @returns {JSX.Element} The rendered step result item
+ */
 const StepResultItem: React.FC<StepResultItemProps> = ({
   stepResult,
   index,

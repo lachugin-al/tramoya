@@ -1,3 +1,18 @@
+/**
+ * Gateway service implementation.
+ * 
+ * This file implements the API gateway service that:
+ * 1. Handles HTTP requests and WebSocket connections
+ * 2. Configures middleware for CORS, body parsing, request ID tracking, and logging
+ * 3. Sets up API routes
+ * 4. Manages connections to external services (MinIO, Redis, Queue)
+ * 5. Provides graceful shutdown handling
+ * 
+ * The gateway service is the main entry point for client applications to interact with the system.
+ * 
+ * @module gateway
+ */
+
 import express from 'express';
 import cors from 'cors';
 import bodyParser from 'body-parser';
@@ -10,7 +25,26 @@ import os from 'os';
 const logger = createLogger('gateway');
 
 /**
- * Initialize and start the gateway service
+ * Initializes and starts the gateway service.
+ * 
+ * This function:
+ * 1. Logs system information (node version, platform, architecture, etc.)
+ * 2. Initializes required services (MinIO, Redis, Queue)
+ * 3. Creates an Express application and configures middleware:
+ *    - CORS
+ *    - Body parser
+ *    - Request ID tracking
+ *    - Request logging with Morgan
+ *    - Error handling
+ * 4. Sets up API routes
+ * 5. Starts the HTTP server
+ * 6. Configures WebSocket server if stream routes are available
+ * 7. Sets up event handlers for graceful shutdown
+ * 8. Sets up error handling for uncaught exceptions and unhandled promise rejections
+ * 
+ * @async
+ * @returns {Promise<void>} A promise that resolves when the gateway service is started
+ * @throws {Error} If there's an error during service initialization or startup
  */
 async function startGateway() {
   logger.info('Starting gateway service', { 
@@ -147,7 +181,20 @@ async function startGateway() {
 }
 
 /**
- * Gracefully shut down the gateway service
+ * Gracefully shuts down the gateway service.
+ * 
+ * This function:
+ * 1. Closes the HTTP server
+ * 2. Closes connections to external services (Queue, Redis)
+ * 3. Logs the shutdown status
+ * 4. Exits the process
+ * 
+ * @async
+ * @param {any} server - The HTTP server instance to close
+ * @param {any} queueService - The queue service instance to shut down
+ * @param {any} redisService - The Redis service instance to shut down
+ * @returns {Promise<void>} A promise that resolves when the shutdown is complete
+ * @throws {Error} If there's an error during the shutdown process
  */
 async function shutdown(
   server: any,

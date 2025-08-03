@@ -1,9 +1,33 @@
 import React from 'react';
 
+/**
+ * Props for the TestBuilderLayout component
+ * 
+ * @interface TestBuilderLayoutProps
+ * @property {React.ReactNode} children - The content to render inside the layout
+ */
 interface TestBuilderLayoutProps {
   children: React.ReactNode;
 }
 
+/**
+ * TestBuilderLayout Component
+ * 
+ * @component
+ * @description A layout wrapper component that provides a consistent structure for the test builder UI.
+ * The layout includes a header section and a content area split into two panels:
+ * a steps panel on the left and a preview panel on the right.
+ * 
+ * @param {TestBuilderLayoutProps} props - Component props
+ * @returns {JSX.Element} The rendered layout with children
+ * 
+ * @example
+ * ```tsx
+ * <TestBuilderLayout>
+ *   <div>Content goes here</div>
+ * </TestBuilderLayout>
+ * ```
+ */
 const TestBuilderLayout: React.FC<TestBuilderLayoutProps> = ({ children }) => {
   return (
     <div className="test-builder-layout">

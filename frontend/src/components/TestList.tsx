@@ -4,18 +4,50 @@ import { toast } from 'react-toastify';
 import apiService from '../services/api';
 import { TestScenario } from '../types';
 
+/**
+ * TestList Component
+ * 
+ * @component
+ * @description Displays a list of all available test scenarios with options to create, edit, and delete tests.
+ * The component handles various states including loading, error, and empty states.
+ * 
+ * @example
+ * ```tsx
+ * <TestList />
+ * ```
+ */
 const TestList: React.FC = () => {
+  /**
+   * State containing the list of test scenarios
+   */
   const [tests, setTests] = useState<TestScenario[]>([]);
+  
+  /**
+   * State indicating whether tests are currently being loaded
+   */
   const [loading, setLoading] = useState(true);
+  
+  /**
+   * State containing error message if test loading fails
+   */
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch tests on component mount
+  /**
+   * Effect hook to fetch tests when component mounts
+   */
   useEffect(() => {
     fetchTests();
   }, []);
 
-  // Fetch all tests from the API
-  const fetchTests = async () => {
+  /**
+   * Fetches all test scenarios from the API
+   * 
+   * @async
+   * @function fetchTests
+   * @description Retrieves all test scenarios from the backend API and updates component state
+   * @returns {Promise<void>}
+   */
+  const fetchTests = async (): Promise<void> => {
     try {
       setLoading(true);
       const data = await apiService.getTests();
@@ -29,8 +61,16 @@ const TestList: React.FC = () => {
     }
   };
 
-  // Delete a test
-  const deleteTest = async (id: string) => {
+  /**
+   * Deletes a test scenario
+   * 
+   * @async
+   * @function deleteTest
+   * @description Prompts for confirmation and deletes the specified test if confirmed
+   * @param {string} id - The unique identifier of the test to delete
+   * @returns {Promise<void>}
+   */
+  const deleteTest = async (id: string): Promise<void> => {
     if (!window.confirm('Are you sure you want to delete this test?')) {
       return;
     }
@@ -44,7 +84,10 @@ const TestList: React.FC = () => {
     }
   };
 
-  // Render loading state
+  /**
+   * Renders loading state when tests are being fetched
+   * @returns {JSX.Element} Loading indicator
+   */
   if (loading && tests.length === 0) {
     return (
       <div className="text-center py-10">
@@ -53,7 +96,10 @@ const TestList: React.FC = () => {
     );
   }
 
-  // Render error state
+  /**
+   * Renders error state when test fetching fails
+   * @returns {JSX.Element} Error message with retry button
+   */
   if (error && tests.length === 0) {
     return (
       <div className="text-center py-10">
@@ -65,7 +111,10 @@ const TestList: React.FC = () => {
     );
   }
 
-  // Render empty state
+  /**
+   * Renders empty state when no tests are available
+   * @returns {JSX.Element} Empty state message with create test button
+   */
   if (tests.length === 0) {
     return (
       <div className="text-center py-10">
@@ -78,7 +127,10 @@ const TestList: React.FC = () => {
     );
   }
 
-  // Render tests list
+  /**
+   * Renders the list of test scenarios
+   * @returns {JSX.Element} Grid layout of test cards with test details and action buttons
+   */
   return (
     <div>
       <div className="flex justify-between items-center mb-6">

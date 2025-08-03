@@ -25,12 +25,40 @@ import TestHeader from './components/TestHeader';
 import StepsPanel from './components/StepsPanel';
 import PreviewPanel from './components/PreviewPanel';
 
-// Create logger for TestBuilder component
+/**
+ * Logger instance for the TestBuilder component
+ */
 const logger = createLogger('test-builder');
 
+/**
+ * TestBuilder Component
+ * 
+ * @component
+ * @description A comprehensive UI for creating, editing, and running test scenarios.
+ * This component provides functionality for:
+ * - Creating new test scenarios
+ * - Editing existing test scenarios
+ * - Adding, editing, deleting, and reordering test steps
+ * - Running tests and viewing results in real-time
+ * - Previewing test execution
+ * 
+ * The component handles different states including loading, error, and normal operation.
+ * It uses React Router for navigation and parameter handling.
+ */
 const TestBuilder: React.FC = () => {
+  /**
+   * Test ID extracted from URL parameters
+   */
   const { id } = useParams<{ id: string }>();
+  
+  /**
+   * Navigation function from React Router
+   */
   const navigate = useNavigate();
+  
+  /**
+   * Flag indicating whether we're editing an existing test or creating a new one
+   */
   const isEditMode = !!id;
 
   // Log component initialization
@@ -39,7 +67,9 @@ const TestBuilder: React.FC = () => {
     testId: id 
   });
 
-  // State
+  /**
+   * State containing the current test scenario being created or edited
+   */
   const [test, setTest] = useState<TestScenario>({
     id: '',
     name: '',
@@ -48,19 +78,55 @@ const TestBuilder: React.FC = () => {
     updatedAt: '',
     steps: [],
   });
+  
+  /**
+   * State indicating whether the test is currently being loaded
+   */
   const [loading, setLoading] = useState(isEditMode);
+  
+  /**
+   * State indicating whether the test is currently being saved
+   */
   const [saving, setSaving] = useState(false);
+  
+  /**
+   * State containing error message if an operation fails
+   */
   const [error, setError] = useState<string | null>(null);
+  
+  /**
+   * State tracking the index of the step currently being edited, or null if not editing
+   */
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  // New state for the updated UI
+  /**
+   * State tracking the current execution status of the test
+   */
   const [testStatus, setTestStatus] = useState<TestStatus>(TestStatus.PENDING);
+  
+  /**
+   * State tracking the selected browser for test execution
+   */
   const [selectedBrowser, setSelectedBrowser] = useState('chrome');
+  
+  /**
+   * State tracking the current URL being tested
+   */
   const [currentUrl, setCurrentUrl] = useState<string>('');
+  
+  /**
+   * State tracking the ID of the current test run
+   */
   const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  
+  /**
+   * State tracking the index of the current step being executed
+   */
   const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
   
-  // Use the run stream hook for real-time updates
+  /**
+   * Hook for real-time updates during test execution via Server-Sent Events
+   */
   const { 
     testResult 
     // Uncomment these if needed later:
@@ -69,7 +135,14 @@ const TestBuilder: React.FC = () => {
     // connected: streamConnected 
   } = useRunStream(currentRunId, null, test.id);
 
-  // Fetch test if in edit mode
+  /**
+   * Effect hook to fetch test data when in edit mode
+   * 
+   * @effect
+   * @description Fetches test data from the API when the component is in edit mode
+   * and performs cleanup when the component unmounts
+   * @dependencies [isEditMode, id]
+   */
   useEffect(() => {
     logger.debug('TestBuilder useEffect - fetch test', { isEditMode, id });
     if (isEditMode && id) {
@@ -84,7 +157,14 @@ const TestBuilder: React.FC = () => {
     };
   }, [isEditMode, id]);
   
-  // Update test status when testResult changes
+  /**
+   * Effect hook to update test status when test results change
+   * 
+   * @effect
+   * @description Updates the test status and current URL based on test results
+   * received from the server
+   * @dependencies [testResult, test.steps]
+   */
   useEffect(() => {
     if (testResult) {
       logger.debug('Test result updated', { 
@@ -109,8 +189,16 @@ const TestBuilder: React.FC = () => {
     }
   }, [testResult, test.steps]);
 
-  // Fetch test from API
-  const fetchTest = async (testId: string) => {
+  /**
+   * Fetches a test scenario from the API
+   * 
+   * @async
+   * @function fetchTest
+   * @description Retrieves a test scenario by ID from the backend API and updates component state
+   * @param {string} testId - The ID of the test to fetch
+   * @returns {Promise<void>}
+   */
+  const fetchTest = async (testId: string): Promise<void> => {
     logger.info(`Fetching test: ${testId}`);
     const startTime = Date.now();
     
@@ -135,8 +223,17 @@ const TestBuilder: React.FC = () => {
     }
   };
 
-  // Save test to API
-  const saveTest = async () => {
+  /**
+   * Saves the current test scenario to the API
+   * 
+   * @async
+   * @function saveTest
+   * @description Validates and saves the current test scenario to the backend API.
+   * If in edit mode, updates the existing test; otherwise creates a new test.
+   * Navigates to the edit page for newly created tests.
+   * @returns {Promise<void>}
+   */
+  const saveTest = async (): Promise<void> => {
     if (!test.name.trim()) {
       logger.warn('Attempted to save test with empty name');
       toast.error('Test name is required');
@@ -189,8 +286,17 @@ const TestBuilder: React.FC = () => {
     }
   };
 
-  // Fetch initial test result (only used for the first fetch)
-  const fetchInitialTestResult = async (resultId: string) => {
+  /**
+   * Fetches the initial test result and sets up SSE connection
+   * 
+   * @async
+   * @function fetchInitialTestResult
+   * @description Retrieves the initial test result by ID and sets up the Server-Sent Events
+   * connection for real-time updates. Also updates the current URL if there's a navigate step.
+   * @param {string} resultId - The ID of the test result to fetch
+   * @returns {Promise<void>}
+   */
+  const fetchInitialTestResult = async (resultId: string): Promise<void> => {
     logger.info(`Fetching initial test result: ${resultId}`);
     const startTime = Date.now();
     
@@ -227,8 +333,17 @@ const TestBuilder: React.FC = () => {
     }
   };
 
-  // Run test
-  const handleRunTest = async () => {
+  /**
+   * Runs the current test scenario
+   * 
+   * @async
+   * @function handleRunTest
+   * @description Validates and executes the current test scenario.
+   * Resets the test state, initiates test execution via the API,
+   * and sets up real-time monitoring of test progress.
+   * @returns {Promise<void>}
+   */
+  const handleRunTest = async (): Promise<void> => {
     if (!test.name.trim() || test.steps.length === 0) {
       logger.warn('Attempted to run test without name or steps', {
         name: test.name,
@@ -279,8 +394,14 @@ const TestBuilder: React.FC = () => {
     }
   };
 
-  // Pause test
-  const handlePauseTest = () => {
+  /**
+   * Pauses the currently running test
+   * 
+   * @function handlePauseTest
+   * @description Stops the execution of the current test by closing the SSE connection
+   * and updating the test status to PENDING.
+   */
+  const handlePauseTest = (): void => {
     logger.info('Pausing test', {
       testId: test.id,
       runId: currentRunId
@@ -293,8 +414,15 @@ const TestBuilder: React.FC = () => {
   };
 
 
-  // Handle editing a step
-  const handleEditStep = (index: number) => {
+  /**
+   * Handles editing a test step
+   * 
+   * @function handleEditStep
+   * @description Sets the editing state for a specific step or cancels editing mode.
+   * When index is -1, it cancels editing; otherwise it sets the specified step as being edited.
+   * @param {number} index - The index of the step to edit, or -1 to cancel editing
+   */
+  const handleEditStep = (index: number): void => {
     if (index === -1) {
       // Cancel editing
       logger.debug('Canceling step editing');
@@ -310,8 +438,15 @@ const TestBuilder: React.FC = () => {
     }
   };
 
-  // Handle deleting a step
-  const handleDeleteStep = (index: number) => {
+  /**
+   * Handles deleting a test step
+   * 
+   * @function handleDeleteStep
+   * @description Removes a step from the test scenario at the specified index.
+   * Also handles canceling edit mode if the deleted step was being edited.
+   * @param {number} index - The index of the step to delete
+   */
+  const handleDeleteStep = (index: number): void => {
     const stepToDelete = test.steps[index];
     logger.info(`Deleting step at index ${index}`, {
       stepId: stepToDelete.id,
@@ -332,8 +467,16 @@ const TestBuilder: React.FC = () => {
     logger.debug(`Test now has ${newSteps.length} steps`);
   };
 
-  // Handle moving steps (drag and drop)
-  const handleMoveStep = (fromIndex: number, toIndex: number) => {
+  /**
+   * Handles moving a test step from one position to another
+   * 
+   * @function handleMoveStep
+   * @description Reorders test steps by moving a step from one index to another.
+   * Also updates the editing index if necessary to maintain the correct editing state.
+   * @param {number} fromIndex - The current index of the step to move
+   * @param {number} toIndex - The target index where the step should be moved to
+   */
+  const handleMoveStep = (fromIndex: number, toIndex: number): void => {
     const stepToMove = test.steps[fromIndex];
     logger.info(`Moving step from index ${fromIndex} to ${toIndex}`, {
       stepId: stepToMove.id,
@@ -361,8 +504,15 @@ const TestBuilder: React.FC = () => {
     }
   };
 
-  // Handle adding a new step
-  const handleAddStep = (stepType: TestStepType) => {
+  /**
+   * Handles adding a new test step
+   * 
+   * @function handleAddStep
+   * @description Creates a new step of the specified type with default values,
+   * adds it to the test scenario, and enters edit mode for the new step.
+   * @param {TestStepType} stepType - The type of step to add
+   */
+  const handleAddStep = (stepType: TestStepType): void => {
     logger.info(`Adding new step of type ${stepType}`);
     
     const newStep = createStepTemplate(stepType);
@@ -378,7 +528,15 @@ const TestBuilder: React.FC = () => {
     setEditingIndex(newIndex);
   };
 
-  // Create a step template with default values
+  /**
+   * Creates a step template with default values
+   * 
+   * @function createStepTemplate
+   * @description Generates a new test step of the specified type with default values.
+   * Creates different step structures based on the step type.
+   * @param {TestStepType} stepType - The type of step to create
+   * @returns {TestStep} A new test step with default values
+   */
   const createStepTemplate = (stepType: TestStepType): TestStep => {
     logger.debug(`Creating step template for type ${stepType}`);
     
@@ -466,8 +624,16 @@ const TestBuilder: React.FC = () => {
     return result;
   };
 
-  // Handle updating a step
-  const handleUpdateStep = (index: number, updatedStep: TestStep) => {
+  /**
+   * Handles updating an existing test step
+   * 
+   * @function handleUpdateStep
+   * @description Updates a test step at the specified index with new values
+   * and exits editing mode.
+   * @param {number} index - The index of the step to update
+   * @param {TestStep} updatedStep - The updated step data
+   */
+  const handleUpdateStep = (index: number, updatedStep: TestStep): void => {
     const originalStep = test.steps[index];
     logger.info(`Updating step at index ${index}`, {
       stepId: updatedStep.id,
@@ -484,7 +650,17 @@ const TestBuilder: React.FC = () => {
     setEditingIndex(null); // Exit editing mode
   };
   
-  // Helper function to get differences between objects for logging
+  /**
+   * Helper function to get differences between objects for logging
+   * 
+   * @function getDifferences
+   * @description Compares two objects and returns a record of all differences,
+   * showing the original and updated values for each changed property.
+   * Used for detailed logging of step updates.
+   * @param {any} original - The original object
+   * @param {any} updated - The updated object
+   * @returns {Record<string, { from: any, to: any }>} Object containing differences
+   */
   const getDifferences = (original: any, updated: any): Record<string, { from: any, to: any }> => {
     const differences: Record<string, { from: any, to: any }> = {};
     
@@ -504,13 +680,22 @@ const TestBuilder: React.FC = () => {
     return differences;
   };
 
-  // Handle test name change
-  const handleTestNameChange = (name: string) => {
+  /**
+   * Handles test name changes
+   * 
+   * @function handleTestNameChange
+   * @description Updates the test scenario's name in the component state
+   * @param {string} name - The new name for the test
+   */
+  const handleTestNameChange = (name: string): void => {
     logger.debug(`Updating test name from "${test.name}" to "${name}"`);
     setTest({ ...test, name });
   };
 
-  // Render loading state
+  /**
+   * Renders loading state when test data is being fetched
+   * @returns {JSX.Element} Loading indicator within the TestBuilderLayout
+   */
   if (loading) {
     return (
         <TestBuilderLayout>
@@ -526,7 +711,10 @@ const TestBuilder: React.FC = () => {
     );
   }
 
-  // Render error state
+  /**
+   * Renders error state when test data fetching fails
+   * @returns {JSX.Element} Error message with retry button within the TestBuilderLayout
+   */
   if (error) {
     return (
         <TestBuilderLayout>
@@ -557,6 +745,10 @@ const TestBuilder: React.FC = () => {
     );
   }
 
+  /**
+   * Renders the main test builder interface
+   * @returns {JSX.Element} Complete test builder UI with header, steps panel, and preview panel
+   */
   return (
       <TestBuilderLayout>
         <div className="test-builder-header">

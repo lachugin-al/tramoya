@@ -2,6 +2,13 @@
 import React, { useState } from 'react';
 import { TestStepType } from '../../../types';
 
+/**
+ * Template definitions for available test step types
+ * 
+ * @constant
+ * @type {Array<{type: TestStepType, icon: string, label: string, description: string}>}
+ * @description Array of step templates that users can add to their tests
+ */
 const StepTemplates = [
     { type: TestStepType.NAVIGATE, icon: '🌐', label: 'Navigate', description: 'Go to URL' },
     { type: TestStepType.INPUT, icon: '⌨️', label: 'Type text', description: 'Enter text in field' },
@@ -13,14 +20,51 @@ const StepTemplates = [
     { type: TestStepType.SCREENSHOT, icon: '📷', label: 'Screenshot', description: 'Take screenshot' },
 ];
 
+/**
+ * Props for the AvailableSteps component
+ * 
+ * @interface AvailableStepsProps
+ * @property {function} [onSelectStepType] - Callback function when a step type is selected
+ * @property {boolean} [compact=false] - Whether to display the component in compact mode
+ */
 interface AvailableStepsProps {
     onSelectStepType?: (type: TestStepType) => void;
     compact?: boolean;
 }
 
+/**
+ * AvailableSteps Component
+ * 
+ * @component
+ * @description Displays a list of available test step types that users can add to their test.
+ * The component can be displayed in two modes:
+ * - Normal mode: A collapsible section with a toggle button
+ * - Compact mode: A simple list of steps
+ * 
+ * @param {AvailableStepsProps} props - Component props
+ * @returns {JSX.Element} The rendered component
+ * 
+ * @example
+ * ```tsx
+ * <AvailableSteps 
+ *   onSelectStepType={handleStepTypeSelect}
+ *   compact={false}
+ * />
+ * ```
+ */
 const AvailableSteps: React.FC<AvailableStepsProps> = ({ onSelectStepType, compact = false }) => {
+    /**
+     * State to track whether the list of steps is expanded or collapsed
+     * Defaults to expanded in normal mode and collapsed in compact mode
+     */
     const [expanded, setExpanded] = useState(!compact);
 
+    /**
+     * Handles selection of a step type
+     * 
+     * @function handleSelectStep
+     * @param {TestStepType} type - The selected step type
+     */
     const handleSelectStep = (type: TestStepType) => {
         if (onSelectStepType) {
             onSelectStepType(type);
