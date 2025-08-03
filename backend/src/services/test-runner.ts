@@ -51,7 +51,31 @@ if (!fs.existsSync(SCREENSHOT_DIR)) {
 }
 
 /**
- * Test runner service that executes test scenarios using Playwright
+ * Service for executing automated test scenarios using Playwright
+ * 
+ * @class TestRunner
+ * @description A comprehensive test execution service that runs test scenarios using Playwright.
+ * This class is responsible for:
+ * 
+ * - Managing browser instances and contexts
+ * - Executing test scenarios and their individual steps
+ * - Capturing screenshots, videos, and traces during test execution
+ * - Recording detailed logs of test execution
+ * - Publishing events about test progress and results
+ * - Storing test artifacts in Minio/S3 storage
+ * - Saving test results in Redis
+ * 
+ * The TestRunner supports various test step types including navigation, input, clicking,
+ * assertions, waiting, and screenshots. It handles both successful and failed test executions,
+ * providing detailed information about failures.
+ * 
+ * Test execution results include:
+ * - Overall test status (passed, failed, error)
+ * - Individual step results with status and timing information
+ * - Screenshots captured during execution
+ * - Video recording of the entire test
+ * - Playwright trace for detailed debugging
+ * - Logs of actions and errors
  */
 export class TestRunner {
     private browser: Browser | null = null;
@@ -59,6 +83,16 @@ export class TestRunner {
     private redisService: RedisService | null = null;
     private tempDir: string;
 
+    /**
+     * Creates a new TestRunner instance
+     * 
+     * @constructor
+     * @description Initializes a new TestRunner with the required services and creates
+     * a temporary directory for storing test artifacts during execution.
+     * 
+     * @param {MinioService} minioService - Service for storing test artifacts (screenshots, videos, traces)
+     * @param {RedisService} [redisService] - Optional service for storing test results and publishing events
+     */
     constructor(minioService: MinioService, redisService?: RedisService) {
         this.minioService = minioService;
         this.redisService = redisService || null;
@@ -69,7 +103,18 @@ export class TestRunner {
     }
 
     /**
-     * Initialize the browser
+     * Initializes the Playwright browser instance
+     * 
+     * @method initBrowser
+     * @description Initializes a headless Chromium browser instance using Playwright if one
+     * doesn't already exist. This method is called internally before test execution to ensure
+     * a browser is available.
+     * 
+     * The browser is launched in headless mode, making it suitable for running in environments
+     * without a display, such as CI/CD pipelines or server environments.
+     * 
+     * @returns {Promise<Browser>} A promise that resolves to the Playwright Browser instance
+     * @private
      */
     private async initBrowser(): Promise<Browser> {
         if (!this.browser) {
@@ -82,7 +127,19 @@ export class TestRunner {
     }
 
     /**
-     * Close the browser
+     * Closes the Playwright browser instance
+     * 
+     * @method closeBrowser
+     * @description Gracefully closes the Playwright browser instance if one is open.
+     * This method should be called when the TestRunner is no longer needed to free up resources.
+     * 
+     * It's important to call this method to ensure proper cleanup of browser resources,
+     * especially in long-running applications to prevent memory leaks.
+     * 
+     * If no browser is currently open, this method does nothing.
+     * 
+     * @returns {Promise<void>} A promise that resolves when the browser has been closed
+     * @public
      */
     public async closeBrowser(): Promise<void> {
         if (this.browser) {
@@ -93,10 +150,30 @@ export class TestRunner {
     }
 
     /**
-     * Execute a test scenario
-     * @param testScenario The test scenario to execute
-     * @param runId Optional run ID for event emission
-     * @returns The test result
+     * Executes a test scenario using Playwright
+     * 
+     * @method executeTest
+     * @description Runs a complete test scenario by executing each step in sequence.
+     * This is the main method of the TestRunner class and orchestrates the entire test execution process.
+     * 
+     * The method performs the following operations:
+     * 1. Initializes a browser and creates a new page
+     * 2. Sets up video recording and tracing
+     * 3. Executes each test step in sequence
+     * 4. Captures screenshots, especially on failures
+     * 5. Records a video of the entire test execution
+     * 6. Creates a Playwright trace for debugging
+     * 7. Uploads artifacts to Minio storage
+     * 8. Saves the test result to Redis (if RedisService is provided)
+     * 9. Publishes events about test progress and completion
+     * 
+     * If any step fails, the test execution continues with the remaining steps to gather
+     * as much information as possible, but the overall test result will be marked as failed.
+     * 
+     * @param {TestScenario} testScenario - The test scenario to execute
+     * @param {string} [runId] - Optional unique identifier for this test run (used for event correlation)
+     * @returns {Promise<TestResult>} A promise that resolves to the complete test result
+     * @public
      */
     public async executeTest(testScenario: TestScenario, runId?: string): Promise<TestResult> {
         logger.info(`Executing test: ${testScenario.id} - ${testScenario.name}`);

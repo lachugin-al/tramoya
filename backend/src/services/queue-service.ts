@@ -6,36 +6,82 @@ import { TestResult } from '../models/test-result';
 
 const logger = createLogger('queue-service');
 
-// Queue names
+/**
+ * Predefined queue names used throughout the application
+ * 
+ * @constant
+ * @type {Object}
+ * @property {string} TEST_EXECUTION - Queue for test execution jobs
+ */
 export const QUEUE_NAMES = {
   TEST_EXECUTION: 'test-execution'
 };
 
-// Event channel names
+/**
+ * Predefined event channel names for Redis pub/sub communication
+ * 
+ * @constant
+ * @type {Object}
+ * @property {string} TEST_EVENTS - Channel for test-related events
+ */
 export const EVENT_CHANNELS = {
   TEST_EVENTS: 'test-events'
 };
 
-// Job types
+/**
+ * Enumeration of job types supported by the queue system
+ * 
+ * @enum {string}
+ * @readonly
+ */
 export enum JobType {
+  /** Job type for executing a test scenario */
   EXECUTE_TEST = 'execute-test'
 }
 
-// Job data interfaces
+/**
+ * Interface for the data required to execute a test
+ * 
+ * @interface ExecuteTestJobData
+ * @property {string} testId - Unique identifier for the test
+ * @property {string} runId - Unique identifier for this specific test run
+ * @property {TestScenario} testScenario - The test scenario to execute
+ */
 export interface ExecuteTestJobData {
   testId: string;
   runId: string;
   testScenario: TestScenario;
 }
 
-// Job result interfaces
+/**
+ * Interface for the result of an executed test
+ * 
+ * @interface ExecuteTestJobResult
+ * @property {string} runId - Unique identifier for the test run
+ * @property {TestResult} testResult - The result of the test execution
+ */
 export interface ExecuteTestJobResult {
   runId: string;
   testResult: TestResult;
 }
 
 /**
- * Service for managing job queues
+ * Service for managing distributed job queues using BullMQ
+ * 
+ * @class QueueService
+ * @description Provides methods for creating and managing job queues, workers, and jobs.
+ * This service uses BullMQ, a Redis-based queue system, to handle distributed job processing.
+ * It supports job scheduling, retries, backoff strategies, and event handling.
+ * 
+ * The QueueService maintains:
+ * - A collection of queues for different job types
+ * - Workers that process jobs from the queues
+ * - Queue event listeners for monitoring job status
+ * 
+ * This service is primarily used for:
+ * - Scheduling and executing test runs
+ * - Managing background processing tasks
+ * - Handling distributed workloads across multiple processes or servers
  */
 export class QueueService {
   private redisService: RedisService;
@@ -49,9 +95,17 @@ export class QueueService {
   }
   
   /**
-   * Create a queue
-   * @param name Queue name
-   * @returns Queue instance
+   * Creates or retrieves a BullMQ queue with the specified name
+   * 
+   * @method createQueue
+   * @description Creates a new BullMQ queue with the specified name, or returns an existing queue
+   * if one with the same name already exists. The method also sets up queue event listeners
+   * to monitor job completion, failures, and stalled jobs.
+   * 
+   * The queue uses the Redis connection from the RedisService for storage and communication.
+   * 
+   * @param {string} name - The name of the queue to create or retrieve
+   * @returns {Queue} The created or existing queue instance
    */
   public createQueue(name: string): Queue {
     if (this.queues.has(name)) {
@@ -89,19 +143,38 @@ export class QueueService {
   }
   
   /**
-   * Get a queue by name
-   * @param name Queue name
-   * @returns Queue instance
+   * Retrieves an existing queue by its name
+   * 
+   * @method getQueue
+   * @description Returns a previously created queue instance with the specified name.
+   * If no queue with the given name exists, the method returns undefined.
+   * 
+   * Unlike createQueue(), this method does not create a new queue if one doesn't exist.
+   * 
+   * @param {string} name - The name of the queue to retrieve
+   * @returns {Queue|undefined} The queue instance if found, or undefined if not found
    */
   public getQueue(name: string): Queue | undefined {
     return this.queues.get(name);
   }
   
   /**
-   * Create a worker for processing jobs
-   * @param queueName Queue name
-   * @param processor Job processor function
-   * @returns Worker instance
+   * Creates a worker to process jobs from a specific queue
+   * 
+   * @method createWorker
+   * @description Creates a new BullMQ worker that processes jobs from the specified queue.
+   * If a worker for the queue already exists, it returns the existing worker.
+   * The worker uses the provided processor function to handle jobs and sets up event listeners
+   * for job completion, failures, and worker errors.
+   * 
+   * Workers are responsible for executing the actual job logic defined in the processor function.
+   * 
+   * @template T - The type of data contained in the job
+   * @template R - The type of result returned by the job processor
+   * @param {string} queueName - The name of the queue to process jobs from
+   * @param {Function} processor - The function that processes each job
+   * @param {Job<T>} processor.job - The job object containing data and metadata
+   * @returns {Worker<T, R>} The created or existing worker instance
    */
   public createWorker<T, R>(
     queueName: string,
@@ -136,12 +209,26 @@ export class QueueService {
   }
   
   /**
-   * Add a job to a queue
-   * @param queueName Queue name
-   * @param jobType Job type
-   * @param data Job data
-   * @param opts Job options
-   * @returns Job ID
+   * Adds a new job to a specified queue
+   * 
+   * @method addJob
+   * @description Creates and adds a new job to the specified queue with the given type and data.
+   * If the queue doesn't exist, it will be created automatically.
+   * 
+   * The method applies default job options including:
+   * - 3 retry attempts
+   * - Exponential backoff strategy starting at 1 second
+   * - Automatic removal of completed jobs
+   * - Retention of failed jobs for inspection
+   * 
+   * These defaults can be overridden by providing custom options in the opts parameter.
+   * 
+   * @template T - The type of data to be stored in the job
+   * @param {string} queueName - The name of the queue to add the job to
+   * @param {string} jobType - The type of job (used for job identification and routing)
+   * @param {T} data - The data to be processed by the job
+   * @param {Object} [opts={}] - Optional BullMQ job options to override defaults
+   * @returns {Promise<string>} A promise that resolves to the ID of the created job
    */
   public async addJob<T>(
     queueName: string,
@@ -167,7 +254,21 @@ export class QueueService {
   }
   
   /**
-   * Close all queues and workers
+   * Gracefully closes all queues, workers, and queue event listeners
+   * 
+   * @method close
+   * @description Properly shuts down all BullMQ components managed by this service.
+   * This includes closing all workers, queue event listeners, and queues.
+   * 
+   * The method follows a specific shutdown order to ensure clean termination:
+   * 1. First, all workers are closed to stop processing new jobs
+   * 2. Then, all queue event listeners are closed to stop monitoring events
+   * 3. Finally, all queues are closed to release resources
+   * 
+   * This method handles errors internally and logs them without throwing exceptions
+   * to ensure the shutdown process continues even if some components fail to close.
+   * 
+   * @returns {Promise<void>} A promise that resolves when all components have been closed
    */
   public async close(): Promise<void> {
     try {

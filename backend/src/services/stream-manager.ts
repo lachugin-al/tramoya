@@ -5,13 +5,30 @@ import { RedisService } from './redis-service';
 
 const logger = createLogger('stream-manager');
 
-// Map to store SSE connections by run ID
+/**
+ * Map to store Server-Sent Events (SSE) connections by run ID
+ * 
+ * @type {Object.<string, Response[]>}
+ * @description This map stores active SSE connections organized by test run ID.
+ * Each run ID maps to an array of Express Response objects representing client connections.
+ * This allows the system to send real-time updates to all clients interested in a specific test run.
+ * @private
+ */
 const clients: Record<string, Response[]> = {};
 
 /**
- * Add a client to the SSE connections map
- * @param runId The run ID
- * @param res The Express response object
+ * Registers a new client connection for a specific test run
+ * 
+ * @function addClient
+ * @description Adds a client's Express Response object to the connections map for a specific run ID.
+ * If this is the first client for the run ID, it initializes a new array.
+ * This function is called when a client establishes an SSE connection to receive real-time updates
+ * about a test run.
+ * 
+ * @param {string} runId - The unique identifier of the test run to subscribe to
+ * @param {Response} res - The Express response object representing the client connection
+ * @returns {void}
+ * @public
  */
 export function addClient(runId: string, res: Response): void {
   clients[runId] = clients[runId] ?? [];
@@ -20,10 +37,23 @@ export function addClient(runId: string, res: Response): void {
 }
 
 /**
- * Notify clients about an event
- * @param runId The run ID
- * @param data The data to send
- * @param end Whether to end the connection
+ * Sends data to all clients subscribed to a specific test run
+ * 
+ * @function notifyClients
+ * @description Broadcasts data to all clients that have subscribed to updates for a specific run ID.
+ * The data is sent as a JSON string in the Server-Sent Events (SSE) format.
+ * 
+ * If the 'end' parameter is true, the function will:
+ * 1. Close all client connections for this run ID
+ * 2. Remove the run ID from the clients map to free up resources
+ * 
+ * If no clients are subscribed to the specified run ID, the function does nothing.
+ * 
+ * @param {string} runId - The unique identifier of the test run to send updates for
+ * @param {unknown} data - The data to send to clients (will be JSON stringified)
+ * @param {boolean} [end=false] - Whether to end the connection after sending the data
+ * @returns {void}
+ * @public
  */
 export function notifyClients(runId: string, data: unknown, end = false): void {
   const receivers = clients[runId] ?? [];
@@ -49,10 +79,27 @@ export function notifyClients(runId: string, data: unknown, end = false): void {
 }
 
 /**
- * Check if a run is complete and finalize it if needed
- * @param run The run object
- * @param redisService The Redis service to save the result
- * @returns True if the run was finalized, false otherwise
+ * Checks if a test run is complete and updates its status accordingly
+ * 
+ * @function finalizeRunIfNeeded
+ * @description Examines a test run to determine if all steps have completed and updates
+ * the run's status based on the results of its steps. The function will:
+ * 
+ * 1. Check if the run is already in a final state (not RUNNING) and do nothing if it is
+ * 2. Verify if all steps are completed (not in RUNNING or PENDING state)
+ * 3. Determine the final status based on step results:
+ *    - PASSED: if all steps passed
+ *    - FAILED: if any step failed
+ *    - ERROR: if any step had an error
+ * 4. Save the updated test result to Redis if the status changed
+ * 
+ * Note: This function does not notify clients about the status change.
+ * The test-runner.ts is responsible for sending the final events to avoid duplicates.
+ * 
+ * @param {TestResult} run - The test run object to check and potentially finalize
+ * @param {RedisService} redisService - The Redis service instance used to save the updated result
+ * @returns {Promise<boolean>} A promise that resolves to true if the run was finalized, false otherwise
+ * @public
  */
 export async function finalizeRunIfNeeded(run: TestResult, redisService: RedisService): Promise<boolean> {
   // If already in a final state, do nothing

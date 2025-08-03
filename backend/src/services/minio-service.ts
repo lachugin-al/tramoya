@@ -6,7 +6,20 @@ import { createLogger } from '../utils/logger';
 const logger = createLogger('minio-service');
 
 /**
- * Service for interacting with Minio/S3 storage
+ * Service for interacting with Minio/S3 compatible object storage
+ * 
+ * @class MinioService
+ * @description Provides methods for file storage operations including bucket management,
+ * file uploads, and URL generation for stored objects. This service uses the Minio client
+ * to interact with S3-compatible storage systems.
+ * 
+ * The service is configured using environment variables:
+ * - MINIO_ENDPOINT: Hostname of the Minio server (default: 'minio')
+ * - MINIO_PORT: Port of the Minio server (default: 9000)
+ * - MINIO_ACCESS_KEY: Access key for authentication (default: 'minioadmin')
+ * - MINIO_SECRET_KEY: Secret key for authentication (default: 'minioadmin')
+ * - MINIO_USE_SSL: Whether to use SSL for connections (default: false)
+ * - MINIO_BUCKET: Name of the bucket to use (default: 'tramoya')
  */
 export class MinioService {
   private client: Minio.Client;
@@ -34,7 +47,15 @@ export class MinioService {
   }
   
   /**
-   * Ensure the bucket exists
+   * Ensures that the configured bucket exists in the Minio storage
+   * 
+   * @method ensureBucket
+   * @description Checks if the configured bucket exists and creates it if it doesn't.
+   * When creating a new bucket, it also sets a bucket policy to allow public read access
+   * to all objects in the bucket.
+   * 
+   * @returns {Promise<void>} A promise that resolves when the bucket exists or has been created
+   * @throws {Error} If there's an error checking bucket existence or creating the bucket
    */
   public async ensureBucket(): Promise<void> {
     try {
@@ -69,10 +90,17 @@ export class MinioService {
   }
   
   /**
-   * Upload a file to Minio
-   * @param filePath Local file path
-   * @param objectName Object name in Minio
-   * @returns The object name
+   * Uploads a file from the local filesystem to Minio storage
+   * 
+   * @method uploadFile
+   * @description Uploads a file from the local filesystem to the configured Minio bucket.
+   * The method automatically determines the content type based on the file extension and
+   * ensures the bucket exists before uploading.
+   * 
+   * @param {string} filePath - Full path to the local file to be uploaded
+   * @param {string} objectName - Name to assign to the object in Minio storage (can include path segments)
+   * @returns {Promise<string>} A promise that resolves to the object name in Minio storage
+   * @throws {Error} If the file doesn't exist or there's an error during upload
    */
   public async uploadFile(filePath: string, objectName: string): Promise<string> {
     try {
@@ -103,10 +131,17 @@ export class MinioService {
   }
   
   /**
-   * Get a presigned URL for an object
-   * @param objectName Object name in Minio
-   * @param expirySeconds Expiry time in seconds (default: 24 hours)
-   * @returns Presigned URL
+   * Generates a presigned URL for temporary access to an object in Minio storage
+   * 
+   * @method getPresignedUrl
+   * @description Creates a time-limited URL that provides direct access to a specific object
+   * in the Minio storage. This URL can be used to access the object without requiring
+   * authentication credentials, but only for the specified duration.
+   * 
+   * @param {string} objectName - Name of the object in Minio storage to generate URL for
+   * @param {number} [expirySeconds=86400] - Number of seconds the URL will be valid (default: 24 hours)
+   * @returns {Promise<string>} A promise that resolves to the presigned URL
+   * @throws {Error} If there's an error generating the presigned URL
    */
   public async getPresignedUrl(objectName: string, expirySeconds: number = 86400): Promise<string> {
     try {
@@ -127,9 +162,17 @@ export class MinioService {
   }
 
   /**
-   * Get a public URL for an object accessible through the frontend proxy
-   * @param objectName Object name in Minio
-   * @returns Public URL
+   * Generates a public URL for an object that can be accessed through the frontend proxy
+   * 
+   * @method getPublicUrl
+   * @description Creates a URL path that can be used to access an object in Minio storage
+   * through the frontend's nginx proxy. This URL is relative and doesn't include the host,
+   * so it can be used in both frontend and backend contexts.
+   * 
+   * The nginx proxy is configured to forward requests to /storage/ path to the Minio server.
+   * 
+   * @param {string} objectName - Name of the object in Minio storage to generate URL for
+   * @returns {string} A relative URL path that can be used to access the object
    */
   public getPublicUrl(objectName: string): string {
     // Return URL that goes through the frontend nginx proxy
@@ -139,9 +182,22 @@ export class MinioService {
   }
 
   /**
-   * Get the content type based on file extension
-   * @param filePath File path
-   * @returns Content type
+   * Determines the appropriate MIME content type based on a file's extension
+   * 
+   * @method getContentType
+   * @description Analyzes the file extension of the provided file path and returns
+   * the corresponding MIME content type. This is used when uploading files to ensure
+   * they have the correct content type metadata.
+   * 
+   * Supported file extensions include:
+   * - Images: .png, .jpg, .jpeg, .gif, .svg
+   * - Web: .html, .css, .js
+   * - Data: .json, .txt
+   * - For unrecognized extensions, 'application/octet-stream' is returned
+   * 
+   * @param {string} filePath - Path to the file (only the extension is used)
+   * @returns {string} The MIME content type corresponding to the file extension
+   * @private
    */
   private getContentType(filePath: string): string {
     const ext = path.extname(filePath).toLowerCase();

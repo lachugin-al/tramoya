@@ -5,7 +5,22 @@ import { TestResult } from '../models/test-result';
 const logger = createLogger('redis-service');
 
 /**
- * Service for interacting with Redis
+ * Service for interacting with Redis database
+ * 
+ * @class RedisService
+ * @description Provides methods for Redis operations including pub/sub messaging and data storage.
+ * This service maintains three separate Redis connections:
+ * - A main client for general operations
+ * - A dedicated publisher client for sending messages
+ * - A dedicated subscriber client for receiving messages
+ * 
+ * The service is configured using environment variables:
+ * - REDIS_URL: The Redis connection URL (default: 'redis://localhost:6379')
+ * 
+ * This service is used for:
+ * - Real-time communication between components via pub/sub
+ * - Storing and retrieving test results
+ * - General Redis operations
  */
 export class RedisService {
   private client: Redis;
@@ -51,30 +66,59 @@ export class RedisService {
   }
   
   /**
-   * Get the Redis client
+   * Returns the main Redis client instance
+   * 
+   * @method getClient
+   * @description Provides access to the main Redis client instance for general operations.
+   * This client should be used for standard Redis operations like get, set, etc.
+   * 
+   * @returns {Redis} The main Redis client instance
    */
   public getClient(): Redis {
     return this.client;
   }
   
   /**
-   * Get the Redis publisher client
+   * Returns the Redis publisher client instance
+   * 
+   * @method getPublisher
+   * @description Provides access to the dedicated Redis client instance used for publishing messages.
+   * This client is optimized for publishing operations and should be used instead of the main client
+   * when publishing messages to channels.
+   * 
+   * @returns {Redis} The Redis publisher client instance
    */
   public getPublisher(): Redis {
     return this.publisher;
   }
   
   /**
-   * Get the Redis subscriber client
+   * Returns the Redis subscriber client instance
+   * 
+   * @method getSubscriber
+   * @description Provides access to the dedicated Redis client instance used for subscribing to channels.
+   * This client is in subscriber mode and should only be used for subscription-related operations.
+   * Note that a Redis client in subscriber mode cannot execute other Redis commands.
+   * 
+   * @returns {Redis} The Redis subscriber client instance
    */
   public getSubscriber(): Redis {
     return this.subscriber;
   }
   
   /**
-   * Publish a message to a channel
-   * @param channel Channel name
-   * @param message Message to publish
+   * Publishes a message to a Redis channel
+   * 
+   * @method publish
+   * @description Publishes a message to the specified Redis channel using the dedicated publisher client.
+   * If the message is not a string, it will be automatically converted to JSON.
+   * The method logs information about the publishing process, including the number of subscribers
+   * that received the message.
+   * 
+   * @param {string} channel - The name of the Redis channel to publish to
+   * @param {any} message - The message to publish (will be stringified if not a string)
+   * @returns {Promise<void>} A promise that resolves when the message has been published
+   * @throws {Error} If there's an error during the publishing process
    */
   public async publish(channel: string, message: any): Promise<void> {
     try {
@@ -95,9 +139,20 @@ export class RedisService {
   }
   
   /**
-   * Subscribe to a channel
-   * @param channel Channel name
-   * @param callback Callback function to handle messages
+   * Subscribes to a Redis channel to receive messages
+   * 
+   * @method subscribe
+   * @description Sets up a subscription to the specified Redis channel using the dedicated subscriber client.
+   * When a message is received on the channel, the provided callback function is invoked with the message.
+   * The method also sets up error handlers for the subscription.
+   * 
+   * Note: The Redis client used for subscriptions enters a special mode where it can only execute
+   * subscription-related commands. Other Redis commands will fail on this client.
+   * 
+   * @param {string} channel - The name of the Redis channel to subscribe to
+   * @param {Function} callback - Callback function that will be called with each message received
+   * @param {string} callback.message - The message received from the channel
+   * @throws {Error} If there's an error during the subscription process
    */
   public subscribe(channel: string, callback: (message: string) => void): void {
     try {
@@ -132,8 +187,17 @@ export class RedisService {
   }
   
   /**
-   * Unsubscribe from a channel
-   * @param channel Channel name
+   * Unsubscribes from a Redis channel
+   * 
+   * @method unsubscribe
+   * @description Removes the subscription to the specified Redis channel using the dedicated subscriber client.
+   * After unsubscribing, no more messages will be received from this channel.
+   * 
+   * This method handles errors internally and doesn't throw exceptions to prevent connection crashes.
+   * Errors are logged but not propagated to the caller.
+   * 
+   * @param {string} channel - The name of the Redis channel to unsubscribe from
+   * @returns {Promise<void>} A promise that resolves when the unsubscription is complete
    */
   public async unsubscribe(channel: string): Promise<void> {
     try {
@@ -150,9 +214,16 @@ export class RedisService {
   }
   
   /**
-   * Get a test result by ID
-   * @param id The test result ID
-   * @returns The test result or null if not found
+   * Retrieves a test result from Redis by its ID
+   * 
+   * @method getTestResult
+   * @description Fetches a previously saved test result from Redis using its unique ID.
+   * The test result is stored as a JSON string in Redis and is parsed back into a TestResult object.
+   * If no test result is found with the given ID, the method returns null.
+   * 
+   * @param {string} id - The unique identifier of the test result to retrieve
+   * @returns {Promise<TestResult|null>} A promise that resolves to the test result object if found, or null if not found
+   * @throws {Error} If there's an error retrieving or parsing the test result
    */
   public async getTestResult(id: string): Promise<TestResult | null> {
     try {
@@ -172,8 +243,16 @@ export class RedisService {
   }
   
   /**
-   * Save a test result
-   * @param testResult The test result to save
+   * Saves a test result to Redis
+   * 
+   * @method saveTestResult
+   * @description Stores a test result object in Redis using its ID as part of the key.
+   * The test result object is serialized to JSON before storage.
+   * This method uses the main Redis client to store the data.
+   * 
+   * @param {TestResult} testResult - The test result object to save
+   * @returns {Promise<void>} A promise that resolves when the test result has been saved
+   * @throws {Error} If there's an error serializing or saving the test result
    */
   public async saveTestResult(testResult: TestResult): Promise<void> {
     try {
@@ -187,7 +266,17 @@ export class RedisService {
   }
 
   /**
-   * Close all Redis connections
+   * Closes all Redis connections gracefully
+   * 
+   * @method close
+   * @description Properly closes all Redis client connections (main client, publisher, and subscriber).
+   * This method should be called when the application is shutting down to ensure all connections
+   * are closed properly and to prevent resource leaks.
+   * 
+   * This method handles errors internally and doesn't throw exceptions to ensure cleanup always proceeds.
+   * Errors are logged but not propagated to the caller.
+   * 
+   * @returns {Promise<void>} A promise that resolves when all connections have been closed
    */
   public async close(): Promise<void> {
     try {
