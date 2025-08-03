@@ -1,23 +1,47 @@
 /**
- * Frontend logging utility
+ * Frontend logging utility module
  * 
- * This module provides a logging utility for the frontend that:
+ * This module provides a comprehensive logging utility for the frontend application that:
  * - Logs to the console with appropriate formatting and colors
  * - Supports different log levels (error, warn, info, debug, trace)
  * - Can send logs to the backend for persistent storage
  * - Includes context information like component name, user session, etc.
+ * - Allows runtime configuration of logging behavior
+ * 
+ * The logger is designed to be easy to use while providing powerful features for debugging
+ * and monitoring the application.
+ * 
+ * @module logger
  */
 
-// Log levels
+/**
+ * Enumeration of available log levels in order of increasing verbosity
+ * 
+ * @enum {number}
+ */
 export enum LogLevel {
+  /** Critical errors that prevent the application from functioning */
   ERROR = 0,
+  
+  /** Warnings about potential issues that don't prevent the application from functioning */
   WARN = 1,
+  
+  /** Informational messages about normal application operation */
   INFO = 2,
+  
+  /** Detailed information useful for debugging */
   DEBUG = 3,
+  
+  /** Very detailed tracing information */
   TRACE = 4
 }
 
-// Log level names
+/**
+ * Mapping of log levels to their string representations
+ * Used for displaying log level names in log messages
+ * 
+ * @internal
+ */
 const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
   [LogLevel.ERROR]: 'ERROR',
   [LogLevel.WARN]: 'WARN',
@@ -26,7 +50,12 @@ const LOG_LEVEL_NAMES: Record<LogLevel, string> = {
   [LogLevel.TRACE]: 'TRACE'
 };
 
-// Console styling for different log levels
+/**
+ * CSS styling for different log levels in the console
+ * Used to visually distinguish between different types of log messages
+ * 
+ * @internal
+ */
 const LOG_LEVEL_STYLES: Record<LogLevel, string> = {
   [LogLevel.ERROR]: 'color: #FF5252; font-weight: bold',
   [LogLevel.WARN]: 'color: #FFC107; font-weight: bold',
@@ -35,12 +64,27 @@ const LOG_LEVEL_STYLES: Record<LogLevel, string> = {
   [LogLevel.TRACE]: 'color: #9E9E9E'
 };
 
-// Default log level based on environment
+/**
+ * Default log level based on the current environment
+ * In production, default to INFO level to reduce noise
+ * In development, default to DEBUG level for more detailed information
+ * 
+ * @internal
+ */
 const DEFAULT_LOG_LEVEL = process.env.NODE_ENV === 'production' 
   ? LogLevel.INFO 
   : LogLevel.DEBUG;
 
-// Configuration for the logger
+/**
+ * Configuration interface for the logger
+ * 
+ * @interface LoggerConfig
+ * @property {LogLevel} level - The current log level
+ * @property {boolean} sendToServer - Whether to send logs to the server
+ * @property {string} [serverEndpoint] - The endpoint to send logs to (if sendToServer is true)
+ * @property {boolean} includeTimestamp - Whether to include timestamps in log messages
+ * @property {string} applicationName - The name of the application (used in server logs)
+ */
 interface LoggerConfig {
   level: LogLevel;
   sendToServer: boolean;
@@ -49,7 +93,11 @@ interface LoggerConfig {
   applicationName: string;
 }
 
-// Default configuration
+/**
+ * Default configuration for the logger
+ * 
+ * @internal
+ */
 const DEFAULT_CONFIG: LoggerConfig = {
   level: DEFAULT_LOG_LEVEL,
   sendToServer: false,
@@ -57,14 +105,42 @@ const DEFAULT_CONFIG: LoggerConfig = {
   applicationName: 'tramoya-frontend'
 };
 
-// Global configuration that can be updated at runtime
+/**
+ * Global configuration that can be updated at runtime
+ * 
+ * @internal
+ */
 let globalConfig: LoggerConfig = { ...DEFAULT_CONFIG };
 
-// Generate a unique session ID for this browser session
+/**
+ * Unique session ID for this browser session
+ * Used to correlate logs from the same session
+ * 
+ * @internal
+ */
 const SESSION_ID = Math.random().toString(36).substring(2, 15);
 
 /**
- * Configure the global logger settings
+ * Configures the global logger settings
+ * 
+ * This function allows you to customize the behavior of all loggers in the application.
+ * Settings are merged with the existing configuration, so you only need to specify
+ * the settings you want to change.
+ * 
+ * @param {Partial<LoggerConfig>} config - Partial configuration to apply
+ * 
+ * @example
+ * // Enable sending logs to the server
+ * configureLogger({
+ *   sendToServer: true,
+ *   serverEndpoint: '/api/logs'
+ * });
+ * 
+ * @example
+ * // Change the log level
+ * configureLogger({
+ *   level: LogLevel.DEBUG
+ * });
  */
 export function configureLogger(config: Partial<LoggerConfig>): void {
   globalConfig = { ...globalConfig, ...config };
@@ -75,7 +151,19 @@ export function configureLogger(config: Partial<LoggerConfig>): void {
 }
 
 /**
- * Get the current log level
+ * Gets the current log level
+ * 
+ * This function checks for a log level in localStorage first (for development),
+ * and falls back to the global configuration if not found.
+ * 
+ * @returns {LogLevel} The current log level
+ * 
+ * @example
+ * // Check the current log level
+ * const level = getLogLevel();
+ * if (level >= LogLevel.DEBUG) {
+ *   console.log('Debug logging is enabled');
+ * }
  */
 export function getLogLevel(): LogLevel {
   // Check for log level in localStorage (for development)
@@ -90,7 +178,20 @@ export function getLogLevel(): LogLevel {
 }
 
 /**
- * Set the log level
+ * Sets the log level
+ * 
+ * This function updates the global log level and stores it in localStorage
+ * for persistence during development.
+ * 
+ * @param {LogLevel} level - The new log level to set
+ * 
+ * @example
+ * // Set the log level to DEBUG
+ * setLogLevel(LogLevel.DEBUG);
+ * 
+ * @example
+ * // Disable all but error logs
+ * setLogLevel(LogLevel.ERROR);
  */
 export function setLogLevel(level: LogLevel): void {
   globalConfig.level = level;
@@ -105,7 +206,13 @@ export function setLogLevel(level: LogLevel): void {
 }
 
 /**
- * Format a log message with timestamp and module name
+ * Formats a log message with timestamp and module name
+ * 
+ * @internal
+ * @param {LogLevel} level - The log level
+ * @param {string} moduleName - The name of the module or component
+ * @param {string} message - The log message
+ * @returns {string} The formatted log message
  */
 function formatLogMessage(level: LogLevel, moduleName: string, message: string): string {
   const timestamp = globalConfig.includeTimestamp ? `[${new Date().toISOString()}] ` : '';
@@ -113,7 +220,17 @@ function formatLogMessage(level: LogLevel, moduleName: string, message: string):
 }
 
 /**
- * Send a log to the server if configured
+ * Sends a log message to the server if server logging is configured
+ * 
+ * This function sends log data to the configured server endpoint using a POST request.
+ * It includes additional context information such as timestamp, session ID, and browser details.
+ * 
+ * @internal
+ * @param {LogLevel} level - The log level
+ * @param {string} moduleName - The name of the module or component
+ * @param {string} message - The log message
+ * @param {any} [data] - Optional additional data to include with the log
+ * @returns {Promise<void>} A promise that resolves when the log is sent or rejected
  */
 async function sendLogToServer(
   level: LogLevel, 
@@ -155,17 +272,40 @@ async function sendLogToServer(
 }
 
 /**
- * Logger class for a specific module
+ * Logger class for a specific module or component
+ * 
+ * This class provides methods for logging messages at different levels (error, warn, info, debug, trace)
+ * and includes utilities for performance measurement and grouping related logs.
+ * 
+ * @class Logger
  */
 export class Logger {
+  /**
+   * The name of the module or component this logger is for
+   * @private
+   */
   private moduleName: string;
   
+  /**
+   * Creates a new Logger instance for a specific module
+   * 
+   * @param {string} moduleName - The name of the module or component this logger is for
+   */
   constructor(moduleName: string) {
     this.moduleName = moduleName;
   }
   
   /**
-   * Log a message at a specific level
+   * Logs a message at a specific level
+   * 
+   * This is the core logging method that all other logging methods (error, warn, info, etc.) call.
+   * It formats the message, logs it to the console with appropriate styling, and sends it to the
+   * server if configured.
+   * 
+   * @private
+   * @param {LogLevel} level - The log level
+   * @param {string} message - The message to log
+   * @param {...any[]} data - Optional additional data to log
    */
   private log(level: LogLevel, message: string, ...data: any[]): void {
     // Check if this level should be logged
@@ -189,42 +329,96 @@ export class Logger {
   }
   
   /**
-   * Log an error message
+   * Logs an error message
+   * 
+   * Use this method for critical errors that prevent the application from functioning correctly.
+   * 
+   * @param {string} message - The error message
+   * @param {...any[]} data - Optional additional data (objects, errors, etc.)
+   * 
+   * @example
+   * const logger = createLogger('AuthService');
+   * try {
+   *   // Some code that might throw
+   * } catch (err) {
+   *   logger.error('Failed to authenticate user', err, { userId: '123' });
+   * }
    */
   error(message: string, ...data: any[]): void {
     this.log(LogLevel.ERROR, message, ...data);
   }
   
   /**
-   * Log a warning message
+   * Logs a warning message
+   * 
+   * Use this method for potential issues that don't prevent the application from functioning.
+   * 
+   * @param {string} message - The warning message
+   * @param {...any[]} data - Optional additional data
+   * 
+   * @example
+   * logger.warn('API response was slow', { responseTime: 3500, endpoint: '/users' });
    */
   warn(message: string, ...data: any[]): void {
     this.log(LogLevel.WARN, message, ...data);
   }
   
   /**
-   * Log an info message
+   * Logs an informational message
+   * 
+   * Use this method for normal application events that are significant for business logic.
+   * 
+   * @param {string} message - The info message
+   * @param {...any[]} data - Optional additional data
+   * 
+   * @example
+   * logger.info('User logged in successfully', { userId: '123', role: 'admin' });
    */
   info(message: string, ...data: any[]): void {
     this.log(LogLevel.INFO, message, ...data);
   }
   
   /**
-   * Log a debug message
+   * Logs a debug message
+   * 
+   * Use this method for detailed information useful during debugging.
+   * 
+   * @param {string} message - The debug message
+   * @param {...any[]} data - Optional additional data
+   * 
+   * @example
+   * logger.debug('Processing form submission', { formData, validationResult });
    */
   debug(message: string, ...data: any[]): void {
     this.log(LogLevel.DEBUG, message, ...data);
   }
   
   /**
-   * Log a trace message
+   * Logs a trace message
+   * 
+   * Use this method for very detailed tracing information.
+   * 
+   * @param {string} message - The trace message
+   * @param {...any[]} data - Optional additional data
+   * 
+   * @example
+   * logger.trace('Entering function', { args });
    */
   trace(message: string, ...data: any[]): void {
     this.log(LogLevel.TRACE, message, ...data);
   }
   
   /**
-   * Log the start of a performance measurement
+   * Starts a performance measurement timer
+   * 
+   * Use this method in conjunction with timeEnd() to measure the duration of operations.
+   * 
+   * @param {string} label - A unique label for the timer
+   * 
+   * @example
+   * logger.time('fetchData');
+   * const data = await fetchData();
+   * logger.timeEnd('fetchData'); // Logs: [ComponentName] fetchData: 123.45ms
    */
   time(label: string): void {
     if (getLogLevel() >= LogLevel.DEBUG) {
@@ -233,7 +427,14 @@ export class Logger {
   }
   
   /**
-   * Log the end of a performance measurement
+   * Ends a performance measurement timer and logs the duration
+   * 
+   * @param {string} label - The label used with the corresponding time() call
+   * 
+   * @example
+   * logger.time('processData');
+   * processData();
+   * logger.timeEnd('processData');
    */
   timeEnd(label: string): void {
     if (getLogLevel() >= LogLevel.DEBUG) {
@@ -242,7 +443,17 @@ export class Logger {
   }
   
   /**
-   * Log a group of related messages
+   * Starts a collapsible group of log messages in the console
+   * 
+   * Use this method to group related log messages together.
+   * 
+   * @param {string} label - The label for the group
+   * 
+   * @example
+   * logger.group('User Authentication');
+   * logger.debug('Validating credentials');
+   * logger.debug('Checking permissions');
+   * logger.groupEnd();
    */
   group(label: string): void {
     if (getLogLevel() >= LogLevel.DEBUG) {
@@ -251,7 +462,12 @@ export class Logger {
   }
   
   /**
-   * End a group of related messages
+   * Ends a group of log messages
+   * 
+   * @example
+   * logger.group('Data Processing');
+   * // ... logs
+   * logger.groupEnd();
    */
   groupEnd(): void {
     if (getLogLevel() >= LogLevel.DEBUG) {
@@ -261,16 +477,49 @@ export class Logger {
 }
 
 /**
- * Create a logger for a specific module
+ * Creates a logger instance for a specific module or component
+ * 
+ * This is the main factory function for creating loggers in the application.
+ * 
+ * @param {string} moduleName - The name of the module or component
+ * @returns {Logger} A new Logger instance
+ * 
+ * @example
+ * // Create a logger for a component
+ * const logger = createLogger('UserProfile');
+ * 
+ * // Use the logger
+ * logger.info('Component mounted');
+ * logger.debug('Props received', props);
  */
 export function createLogger(moduleName: string): Logger {
   return new Logger(moduleName);
 }
 
-// Create a default logger
+/**
+ * Default application-level logger
+ * 
+ * Use this logger for general application logging when a more specific
+ * module or component logger is not appropriate.
+ * 
+ * @example
+ * import { logger } from '../utils/logger';
+ * 
+ * logger.info('Application started');
+ */
 export const logger = createLogger('app');
 
-// Export a function to enable server logging
+/**
+ * Enables sending logs to a server endpoint
+ * 
+ * This is a convenience function for configuring server logging.
+ * 
+ * @param {string} endpoint - The URL endpoint to send logs to
+ * 
+ * @example
+ * // Enable sending logs to the server
+ * enableServerLogging('/api/logs');
+ */
 export function enableServerLogging(endpoint: string): void {
   configureLogger({
     sendToServer: true,

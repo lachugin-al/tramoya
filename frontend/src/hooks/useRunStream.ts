@@ -3,6 +3,18 @@ import {EventSourcePolyfill} from 'event-source-polyfill';
 import {TestResult, TestStatus, StepStatus, Screenshot} from '../types';
 import {verifyImageUrl} from '../utils/debug';
 
+/**
+ * Event data structure received from the Server-Sent Events stream
+ * @interface RunStreamEvent
+ * @property {string} type - The type of event (e.g., 'step-start', 'frame', 'step-end', 'run-finished')
+ * @property {string} runId - The unique identifier for the test run
+ * @property {string} stepId - The identifier for the test step this event relates to
+ * @property {string} [url] - Optional URL to a resource (typically a screenshot)
+ * @property {string} [status] - Optional status update for a step or run
+ * @property {string} [video] - Optional URL to a video recording of the test run
+ * @property {string} [trace] - Optional URL to a trace file for debugging
+ * @property {number} ts - Timestamp of when the event occurred (in milliseconds since epoch)
+ */
 interface RunStreamEvent {
     type: string;
     runId: string;
@@ -15,9 +27,44 @@ interface RunStreamEvent {
 }
 
 /**
- * Hook for subscribing to test run events via SSE
- * @param runId The ID of the test run to subscribe to
- * @param initialResult Optional initial test result
+ * Custom React hook for subscribing to and processing test run events via Server-Sent Events (SSE).
+ * 
+ * This hook establishes a connection to the server's event stream for a specific test run,
+ * processes incoming events (screenshots, step status updates, etc.), and maintains the current
+ * state of the test run in real-time.
+ * 
+ * @param {string | null} runId - The unique identifier for the test run to subscribe to, or null if no subscription is needed
+ * @param {TestResult | null} [initialResult] - Optional initial test result state to use
+ * @param {string | null} [testId] - Optional test identifier, used when creating a new test result if none exists
+ * 
+ * @returns {Object} An object containing:
+ *   - testResult: The current state of the test result, updated in real-time as events are received
+ *   - loading: Boolean indicating if the connection is being established
+ *   - error: Error message if connection failed, or null if no error
+ *   - connected: Boolean indicating if the SSE connection is currently active
+ * 
+ * @example
+ * // Basic usage in a component
+ * const { testResult, loading, error, connected } = useRunStream('run-123');
+ * 
+ * // With initial result
+ * const { testResult } = useRunStream('run-123', existingResult);
+ * 
+ * @example
+ * // Handling the different states
+ * if (loading) {
+ *   return <div>Connecting to test run stream...</div>;
+ * }
+ * 
+ * if (error) {
+ *   return <div>Error: {error}</div>;
+ * }
+ * 
+ * if (!connected) {
+ *   return <div>Disconnected from test run stream</div>;
+ * }
+ * 
+ * return <TestResultView result={testResult} />;
  */
 export const useRunStream = (
     runId: string | null,
