@@ -6,7 +6,7 @@ import {verifyImageUrl} from '../utils/debug';
 /**
  * Event data structure received from the Server-Sent Events stream.
  * This interface defines the shape of events coming from the backend test runner.
- * 
+ *
  * @interface RunStreamEvent
  * @property {string} type - The type of event (e.g., 'step-start', 'frame', 'step-end', 'run-finished')
  * @property {string} runId - The unique identifier for the test run
@@ -30,11 +30,11 @@ interface RunStreamEvent {
 
 /**
  * Custom React hook for subscribing to and processing test run events via Server-Sent Events (SSE).
- * 
+ *
  * This hook establishes a connection to the server's event stream for a specific test run,
  * processes incoming events (screenshots, step status updates, etc.), and maintains the current
  * state of the test run in real-time.
- * 
+ *
  * The hook handles various event types including:
  * - step-start: When a test step begins execution
  * - frame: When a new screenshot is captured
@@ -43,38 +43,38 @@ interface RunStreamEvent {
  * - test-result: When a complete test result is available
  * - connected: When the SSE connection is established
  * - step: When a step status changes
- * 
+ *
  * @param {string | null} runId - The unique identifier for the test run to subscribe to, or null if no subscription is needed
  * @param {TestResult | null} [initialResult] - Optional initial test result state to use
  * @param {string | null} [testId] - Optional test identifier, used when creating a new test result if none exists
- * 
+ *
  * @returns {Object} An object containing:
  *   - testResult: The current state of the test result, updated in real-time as events are received
  *   - loading: Boolean indicating if the connection is being established
  *   - error: Error message if connection failed, or null if no error
  *   - connected: Boolean indicating if the SSE connection is currently active
- * 
+ *
  * @example
  * // Basic usage in a component
  * const { testResult, loading, error, connected } = useRunStream('run-123');
- * 
+ *
  * // With initial result
  * const { testResult } = useRunStream('run-123', existingResult);
- * 
+ *
  * @example
  * // Handling the different states
  * if (loading) {
  *   return <div>Connecting to test run stream...</div>;
  * }
- * 
+ *
  * if (error) {
  *   return <div>Error: {error}</div>;
  * }
- * 
+ *
  * if (!connected) {
  *   return <div>Disconnected from test run stream</div>;
  * }
- * 
+ *
  * return <TestResultView result={testResult} />;
  */
 export const useRunStream = (
@@ -99,32 +99,32 @@ export const useRunStream = (
         if (testResult) {
             let needsUpdate = false;
             let updatedFields: Record<string, any> = {};
-            
+
             // Check if test has a final status but no endTime
-            if ((testResult.status === TestStatus.PASSED || 
-                 testResult.status === TestStatus.FAILED || 
-                 testResult.status === TestStatus.ERROR) && 
+            if ((testResult.status === TestStatus.PASSED ||
+                    testResult.status === TestStatus.FAILED ||
+                    testResult.status === TestStatus.ERROR) &&
                 !testResult.endTime) {
-                
+
                 updatedFields.endTime = new Date().toISOString();
                 needsUpdate = true;
                 console.log('Adding missing endTime to completed test');
             }
-            
+
             // Check if videoUrl is undefined or null and set it to empty string
             if (testResult.videoUrl === undefined || testResult.videoUrl === null) {
                 updatedFields.videoUrl = '';
                 needsUpdate = true;
                 console.log('Setting undefined videoUrl to empty string');
             }
-            
+
             // Check if traceUrl is undefined or null and set it to empty string
             if (testResult.traceUrl === undefined || testResult.traceUrl === null) {
                 updatedFields.traceUrl = '';
                 needsUpdate = true;
                 console.log('Setting undefined traceUrl to empty string');
             }
-            
+
             // Check if summary is missing and generate it
             if (!testResult.summary) {
                 const stepResults = testResult.stepResults || [];
@@ -133,13 +133,13 @@ export const useRunStream = (
                 const failedSteps = stepResults.filter(s => s.status === StepStatus.FAILED).length;
                 const skippedSteps = stepResults.filter(s => s.status === StepStatus.SKIPPED).length;
                 const errorSteps = stepResults.filter(s => s.status === StepStatus.ERROR).length;
-                
+
                 // Calculate duration if possible
                 let duration = 0;
                 if (testResult.endTime && testResult.startTime) {
                     duration = new Date(testResult.endTime).getTime() - new Date(testResult.startTime).getTime();
                 }
-                
+
                 updatedFields.summary = {
                     totalSteps,
                     passedSteps,
@@ -148,23 +148,23 @@ export const useRunStream = (
                     errorSteps,
                     duration
                 };
-                
+
                 needsUpdate = true;
                 console.log('Adding missing summary to test result');
             }
-            
+
             // Update the test result if needed
             if (needsUpdate) {
                 setTestResult(prevResult => {
                     if (!prevResult) return prevResult;
-                    
+
                     return {
                         ...prevResult,
                         ...updatedFields
                     };
                 });
             }
-            
+
             // Enhanced logging to verify our fixes
             console.log('TestResult state updated:', {
                 id: testResult.id,
@@ -177,7 +177,7 @@ export const useRunStream = (
                 videoUrl: testResult.videoUrl || '',  // Provide a fallback for videoUrl
                 traceUrl: testResult.traceUrl || ''   // Provide a fallback for traceUrl
             });
-            
+
             console.log('Current steps:', testResult.stepResults.map(step =>
                 `${step.stepId}: ${step.status} (${step.screenshots.length} screenshots)`).join(', '));
         }
@@ -258,11 +258,11 @@ export const useRunStream = (
 
             /**
              * Event handler for 'step-start' events.
-             * 
+             *
              * This handler processes events that indicate a test step has started execution.
              * It updates the corresponding step's status to RUNNING and ensures the overall
              * test status is set to RUNNING.
-             * 
+             *
              * @param {any} event - The event object from the EventSource
              */
             eventSource.addEventListener('step-start', (event: any) => {
@@ -310,12 +310,12 @@ export const useRunStream = (
 
             /**
              * Event handler for 'frame' events.
-             * 
+             *
              * This handler processes events that contain screenshot data from the test execution.
              * It creates or updates the test result with the new screenshot, ensuring all required
              * fields are properly set. If this is the first event received, it will initialize
              * the test result structure.
-             * 
+             *
              * @param {any} event - The event object from the EventSource
              */
             eventSource.addEventListener('frame', (event: any) => {
@@ -423,11 +423,11 @@ export const useRunStream = (
 
             /**
              * Event handler for 'step-end' events.
-             * 
+             *
              * This handler processes events that indicate a test step has completed execution.
              * It updates the corresponding step's status to the final status provided in the event
              * (e.g., PASSED, FAILED, SKIPPED, ERROR).
-             * 
+             *
              * @param {any} event - The event object from the EventSource
              */
             eventSource.addEventListener('step-end', (event: any) => {
@@ -474,12 +474,12 @@ export const useRunStream = (
 
             /**
              * Event handler for 'run-finished' events.
-             * 
+             *
              * This handler processes events that indicate the entire test run has completed.
              * It updates the test result with the final status, video URL, trace URL, and end time.
              * It also handles duplicate run-finished events by ignoring them if the test already
              * has a final status.
-             * 
+             *
              * @param {any} event - The event object from the EventSource
              */
             eventSource.addEventListener('run-finished', (event: any) => {
@@ -522,13 +522,13 @@ export const useRunStream = (
 
             /**
              * Event handler for 'test-result' events.
-             * 
+             *
              * This handler processes events that contain a complete test result object.
              * Unlike other events that update specific parts of the test result, this event
              * replaces the entire test result state with the provided data.
-             * 
+             *
              * Note: test-result events use 'id' instead of 'runId' for identification.
-             * 
+             *
              * @param {any} event - The event object from the EventSource
              */
             eventSource.addEventListener('test-result', (event: any) => {
@@ -552,11 +552,11 @@ export const useRunStream = (
 
             /**
              * Event handler for 'connected' events.
-             * 
+             *
              * This handler processes events that indicate the SSE connection has been established.
              * It validates that the event is for the correct runId but doesn't update any state
              * as the connection state is managed by the onopen handler.
-             * 
+             *
              * @param {any} event - The event object from the EventSource
              */
             eventSource.addEventListener('connected', (event: any) => {
@@ -578,11 +578,11 @@ export const useRunStream = (
 
             /**
              * Event handler for 'step' events.
-             * 
+             *
              * This handler processes events that update a step's status and potentially add a screenshot.
              * It's similar to step-end but can be used for any status update during the step's lifecycle.
              * If the event includes a URL, it will add a new screenshot to the step's collection.
-             * 
+             *
              * @param {any} event - The event object from the EventSource
              */
             eventSource.addEventListener('step', (event: any) => {
@@ -651,16 +651,16 @@ export const useRunStream = (
 
             /**
              * Generic message event handler.
-             * 
+             *
              * This handler processes any events that don't have a specific event listener.
              * It handles:
              * 1. Special [DONE] messages that indicate the stream should be closed
              * 2. Generic 'step' events (both lowercase and uppercase for backward compatibility)
              * 3. Generic 'run-finished' events (both lowercase and uppercase for backward compatibility)
-             * 
+             *
              * This provides a fallback mechanism for handling events that might be sent with
              * different formats or types than expected.
-             * 
+             *
              * @param {MessageEvent} e - The message event from the EventSource
              */
             eventSource.onmessage = (e) => {
@@ -754,7 +754,7 @@ export const useRunStream = (
                     console.error('Error processing message event:', err);
                 }
             };
-            
+
             // Log EventSource instance after all handlers are assigned
             console.log('EventSource instance created with all handlers:', {
                 instance: 'EventSourcePolyfill',
@@ -786,7 +786,7 @@ export const useRunStream = (
 
     /**
      * Returns an object containing the current state of the test run stream.
-     * 
+     *
      * @returns {Object} An object with the following properties:
      *   - testResult: The current state of the test result, updated in real-time as events are received
      *   - loading: Boolean indicating if the connection is being established

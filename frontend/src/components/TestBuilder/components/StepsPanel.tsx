@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {DndProvider} from 'react-dnd';
 import {HTML5Backend} from 'react-dnd-html5-backend';
 import {TestStep, TestStepType} from '../../../types';
@@ -7,23 +7,23 @@ import StepCard from './StepCard';
 /**
  * Templates for available test step types that can be added to a test scenario
  * Each template includes an icon, label, and description for display in the UI
- * 
+ *
  * @constant {Array<{type: TestStepType, icon: string, label: string, description: string}>}
  */
 const StepTemplates = [
-    { type: TestStepType.NAVIGATE, icon: '🌐', label: 'Navigate', description: 'Go to URL' },
-    { type: TestStepType.INPUT, icon: '⌨️', label: 'Type text', description: 'Enter text in field' },
-    { type: TestStepType.CLICK, icon: '🖱️', label: 'Click', description: 'Click element' },
-    { type: TestStepType.ASSERT_TEXT, icon: '📝', label: 'Assert text', description: 'Check text content' },
-    { type: TestStepType.ASSERT_VISIBLE, icon: '👁️', label: 'Assert visible', description: 'Check visibility' },
-    { type: TestStepType.WAIT, icon: '⏱️', label: 'Wait', description: 'Pause execution' },
-    { type: TestStepType.ASSERT_URL, icon: '🔗', label: 'Assert URL', description: 'Check current URL' },
-    { type: TestStepType.SCREENSHOT, icon: '📷', label: 'Screenshot', description: 'Take screenshot' },
+    {type: TestStepType.NAVIGATE, icon: '🌐', label: 'Navigate', description: 'Go to URL'},
+    {type: TestStepType.INPUT, icon: '⌨️', label: 'Type text', description: 'Enter text in field'},
+    {type: TestStepType.CLICK, icon: '🖱️', label: 'Click', description: 'Click element'},
+    {type: TestStepType.ASSERT_TEXT, icon: '📝', label: 'Assert text', description: 'Check text content'},
+    {type: TestStepType.ASSERT_VISIBLE, icon: '👁️', label: 'Assert visible', description: 'Check visibility'},
+    {type: TestStepType.WAIT, icon: '⏱️', label: 'Wait', description: 'Pause execution'},
+    {type: TestStepType.ASSERT_URL, icon: '🔗', label: 'Assert URL', description: 'Check current URL'},
+    {type: TestStepType.SCREENSHOT, icon: '📷', label: 'Screenshot', description: 'Take screenshot'},
 ];
 
 /**
  * Props for the StepsPanel component
- * 
+ *
  * @interface StepsPanelProps
  * @property {TestStep[]} steps - Array of test steps to display in the panel
  * @property {function} onEditStep - Callback function when a step is selected for editing
@@ -45,7 +45,7 @@ interface StepsPanelProps {
 
 /**
  * StepsPanel Component
- * 
+ *
  * @component
  * @description Renders the panel for managing test steps in the test builder interface.
  * This component provides functionality for:
@@ -53,12 +53,12 @@ interface StepsPanelProps {
  * - Adding new steps from a dropdown of available step types
  * - Editing, deleting, and reordering existing steps
  * - Showing an empty state when no steps exist
- * 
+ *
  * The component uses react-dnd for drag and drop functionality to reorder steps.
- * 
+ *
  * @param {StepsPanelProps} props - Component props
  * @returns {JSX.Element} The rendered steps panel component
- * 
+ *
  * @example
  * ```tsx
  * <StepsPanel
@@ -88,7 +88,7 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
 
     /**
      * Handles the selection of a step type from the available steps dropdown
-     * 
+     *
      * @function handleSelectStepType
      * @param {TestStepType} stepType - The type of step to add
      * @returns {void}
@@ -101,7 +101,7 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
     /**
      * Handles canceling the editing of a step
      * Signals to the parent component to exit editing mode
-     * 
+     *
      * @function handleCancelEdit
      * @returns {void}
      */
@@ -113,7 +113,7 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
     /**
      * Handles saving an updated step
      * Updates the step data and exits editing mode
-     * 
+     *
      * @function handleSaveStep
      * @param {number} index - The index of the step being updated
      * @param {TestStep} updatedStep - The updated step data

@@ -1,46 +1,46 @@
-import React, { useRef, useState, useEffect } from 'react';
-import { useDrag, useDrop, DropTargetMonitor } from 'react-dnd';
-import { TestStep, TestStepType } from '../../../types';
+import React, {useRef, useState, useEffect} from 'react';
+import {useDrag, useDrop, DropTargetMonitor} from 'react-dnd';
+import {TestStep, TestStepType} from '../../../types';
 
 /**
  * Icons for each test step type
- * 
+ *
  * @constant
  * @type {Record<TestStepType, string>}
  * @description Emoji icons representing each type of test step
  */
 const StepIcons: Record<TestStepType, string> = {
-  [TestStepType.NAVIGATE]: '🌐',
-  [TestStepType.INPUT]: '⌨️',
-  [TestStepType.CLICK]: '🖱️',
-  [TestStepType.ASSERT_TEXT]: '📝',
-  [TestStepType.ASSERT_VISIBLE]: '👁️',
-  [TestStepType.WAIT]: '⏱️',
-  [TestStepType.ASSERT_URL]: '🔗',
-  [TestStepType.SCREENSHOT]: '📷',
+    [TestStepType.NAVIGATE]: '🌐',
+    [TestStepType.INPUT]: '⌨️',
+    [TestStepType.CLICK]: '🖱️',
+    [TestStepType.ASSERT_TEXT]: '📝',
+    [TestStepType.ASSERT_VISIBLE]: '👁️',
+    [TestStepType.WAIT]: '⏱️',
+    [TestStepType.ASSERT_URL]: '🔗',
+    [TestStepType.SCREENSHOT]: '📷',
 };
 
 /**
  * Display labels for each test step type
- * 
+ *
  * @constant
  * @type {Record<TestStepType, string>}
  * @description Human-readable labels for each type of test step
  */
 const StepLabels: Record<TestStepType, string> = {
-  [TestStepType.NAVIGATE]: 'Navigate',
-  [TestStepType.INPUT]: 'Type text',
-  [TestStepType.CLICK]: 'Click',
-  [TestStepType.ASSERT_TEXT]: 'Assert text',
-  [TestStepType.ASSERT_VISIBLE]: 'Assert visible',
-  [TestStepType.WAIT]: 'Wait',
-  [TestStepType.ASSERT_URL]: 'Assert URL',
-  [TestStepType.SCREENSHOT]: 'Screenshot',
+    [TestStepType.NAVIGATE]: 'Navigate',
+    [TestStepType.INPUT]: 'Type text',
+    [TestStepType.CLICK]: 'Click',
+    [TestStepType.ASSERT_TEXT]: 'Assert text',
+    [TestStepType.ASSERT_VISIBLE]: 'Assert visible',
+    [TestStepType.WAIT]: 'Wait',
+    [TestStepType.ASSERT_URL]: 'Assert URL',
+    [TestStepType.SCREENSHOT]: 'Screenshot',
 };
 
 /**
  * Props for the StepCard component
- * 
+ *
  * @interface StepCardProps
  * @property {TestStep} step - The test step data to display and edit
  * @property {number} index - The index of the step in the list
@@ -54,53 +54,53 @@ const StepLabels: Record<TestStepType, string> = {
  * @property {function} [onMoveDown] - Callback function when the step is moved down
  */
 interface StepCardProps {
-  step: TestStep;
-  index: number;
-  isEditing?: boolean;
-  onEdit: () => void;
-  onDelete: () => void;
-  onSave: (step: TestStep) => void;
-  onCancel: () => void;
-  onMoveStep?: (fromIndex: number, toIndex: number) => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
+    step: TestStep;
+    index: number;
+    isEditing?: boolean;
+    onEdit: () => void;
+    onDelete: () => void;
+    onSave: (step: TestStep) => void;
+    onCancel: () => void;
+    onMoveStep?: (fromIndex: number, toIndex: number) => void;
+    onMoveUp?: () => void;
+    onMoveDown?: () => void;
 }
 
 /**
  * Interface for drag and drop item data
- * 
+ *
  * @interface DragItem
  * @property {string} type - The type of the draggable item
  * @property {number} index - The index of the item in the list
  * @property {string} id - The unique identifier of the item
  */
 interface DragItem {
-  type: string;
-  index: number;
-  id: string;
+    type: string;
+    index: number;
+    id: string;
 }
 
 /**
  * Interface for drop target collected props
- * 
+ *
  * @interface DropCollectedProps
  * @property {string|symbol|null} handlerId - The handler ID for the drop target
  */
 interface DropCollectedProps {
-  handlerId: string | symbol | null;
+    handlerId: string | symbol | null;
 }
 
 /**
  * StepCard Component
- * 
+ *
  * @component
  * @description Renders a single test step card with view and edit modes.
  * Supports drag and drop reordering, editing, and deletion of steps.
  * The component displays different fields based on the step type.
- * 
+ *
  * @param {StepCardProps} props - Component props
  * @returns {JSX.Element} The rendered step card
- * 
+ *
  * @example
  * ```tsx
  * <StepCard
@@ -116,525 +116,526 @@ interface DropCollectedProps {
  * ```
  */
 const StepCard: React.FC<StepCardProps> = ({
-                                             step,
-                                             index,
-                                             isEditing = false,
-                                             onEdit,
-                                             onDelete,
-                                             onSave,
-                                             onCancel,
-                                             onMoveStep,
-                                             onMoveUp,
-                                             onMoveDown
+                                               step,
+                                               index,
+                                               isEditing = false,
+                                               onEdit,
+                                               onDelete,
+                                               onSave,
+                                               onCancel,
+                                               onMoveStep,
+                                               onMoveUp,
+                                               onMoveDown
                                            }) => {
-  /**
-   * Reference to the DOM element for drag and drop
-   */
-  const ref = useRef<HTMLDivElement>(null);
-  
-  /**
-   * State for the editable copy of the step
-   */
-  const [editableStep, setEditableStep] = useState<TestStep>(step);
+    /**
+     * Reference to the DOM element for drag and drop
+     */
+    const ref = useRef<HTMLDivElement>(null);
 
-  /**
-   * Effect to update the editable step when the props change
-   */
-  useEffect(() => {
-    setEditableStep(step);
-  }, [step, isEditing]);
+    /**
+     * State for the editable copy of the step
+     */
+    const [editableStep, setEditableStep] = useState<TestStep>(step);
 
-  // Drag functionality
-  const [{ isDragging }, drag] = useDrag({
-    type: 'STEP_CARD',
-    canDrag: !isEditing,
-    item: (): DragItem => ({
-      type: 'STEP_CARD',
-      index,
-      id: step.id,
-    }),
-    collect: (monitor) => ({
-      isDragging: monitor.isDragging(),
-    }),
-  });
+    /**
+     * Effect to update the editable step when the props change
+     */
+    useEffect(() => {
+        setEditableStep(step);
+    }, [step, isEditing]);
 
-  // Drop functionality
-  const [{ handlerId }, drop] = useDrop<DragItem, void, DropCollectedProps>({
-    accept: 'STEP_CARD',
-    collect: (monitor: DropTargetMonitor) => ({
-      handlerId: monitor.getHandlerId(),
-    }),
-    hover: (item: DragItem, monitor: DropTargetMonitor) => {
-      if (!ref.current || isEditing) {
-        return;
-      }
-      const dragIndex = item.index;
-      const hoverIndex = index;
+    // Drag functionality
+    const [{isDragging}, drag] = useDrag({
+        type: 'STEP_CARD',
+        canDrag: !isEditing,
+        item: (): DragItem => ({
+            type: 'STEP_CARD',
+            index,
+            id: step.id,
+        }),
+        collect: (monitor) => ({
+            isDragging: monitor.isDragging(),
+        }),
+    });
 
-      if (dragIndex === hoverIndex) {
-        return;
-      }
+    // Drop functionality
+    const [{handlerId}, drop] = useDrop<DragItem, void, DropCollectedProps>({
+        accept: 'STEP_CARD',
+        collect: (monitor: DropTargetMonitor) => ({
+            handlerId: monitor.getHandlerId(),
+        }),
+        hover: (item: DragItem, monitor: DropTargetMonitor) => {
+            if (!ref.current || isEditing) {
+                return;
+            }
+            const dragIndex = item.index;
+            const hoverIndex = index;
 
-      const hoverBoundingRect = ref.current?.getBoundingClientRect();
-      const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
-      const clientOffset = monitor.getClientOffset();
+            if (dragIndex === hoverIndex) {
+                return;
+            }
 
-      if (!clientOffset) {
-        return;
-      }
+            const hoverBoundingRect = ref.current?.getBoundingClientRect();
+            const hoverMiddleY = (hoverBoundingRect.bottom - hoverBoundingRect.top) / 2;
+            const clientOffset = monitor.getClientOffset();
 
-      const hoverClientY = clientOffset.y - hoverBoundingRect.top;
+            if (!clientOffset) {
+                return;
+            }
 
-      if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
-        return;
-      }
+            const hoverClientY = clientOffset.y - hoverBoundingRect.top;
 
-      if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
-        return;
-      }
+            if (dragIndex < hoverIndex && hoverClientY < hoverMiddleY) {
+                return;
+            }
 
-      if (onMoveStep) {
-        onMoveStep(dragIndex, hoverIndex);
-      }
+            if (dragIndex > hoverIndex && hoverClientY > hoverMiddleY) {
+                return;
+            }
 
-      item.index = hoverIndex;
-    },
-  });
+            if (onMoveStep) {
+                onMoveStep(dragIndex, hoverIndex);
+            }
 
-  // Combine drag and drop refs
-  drag(drop(ref));
+            item.index = hoverIndex;
+        },
+    });
 
-  const handleSave = () => {
-    onSave(editableStep);
-  };
+    // Combine drag and drop refs
+    drag(drop(ref));
 
-  const handleFieldChange = (field: string, value: any) => {
-    setEditableStep(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
+    const handleSave = () => {
+        onSave(editableStep);
+    };
 
-  const getStepSummary = () => {
-    const currentStep = isEditing ? editableStep : step;
-    switch (currentStep.type) {
-      case TestStepType.NAVIGATE:
-        return (currentStep as any).url || 'Enter URL...';
-      case TestStepType.INPUT:
-        return `${(currentStep as any).selector || 'selector'}: "${(currentStep as any).text || 'text'}"`;
-      case TestStepType.CLICK:
-        return (currentStep as any).selector || 'Enter selector...';
-      case TestStepType.ASSERT_TEXT:
-        return `${(currentStep as any).selector || 'selector'}: "${(currentStep as any).text || 'text'}"`;
-      case TestStepType.ASSERT_VISIBLE:
-        return (currentStep as any).selector || 'Enter selector...';
-      case TestStepType.WAIT:
-        return `${(currentStep as any).milliseconds || 1000}ms`;
-      case TestStepType.ASSERT_URL:
-        return (currentStep as any).url || 'Enter URL...';
-      case TestStepType.SCREENSHOT:
-        return (currentStep as any).name || 'Screenshot';
-      default:
-        return '';
-    }
-  };
+    const handleFieldChange = (field: string, value: any) => {
+        setEditableStep(prev => ({
+            ...prev,
+            [field]: value
+        }));
+    };
 
-  const renderEditForm = () => {
-    switch (editableStep.type) {
-      case TestStepType.NAVIGATE:
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>URL:</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).url || ''}
-                    onChange={(e) => handleFieldChange('url', e.target.value)}
-                    placeholder="https://example.com"
-                />
-              </div>
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).takeScreenshot || false}
-                      onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
-                  />
-                  Take screenshot after this step
-                </label>
-              </div>
-            </div>
-        );
-      case TestStepType.INPUT:
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>Selector:</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).selector || ''}
-                    onChange={(e) => handleFieldChange('selector', e.target.value)}
-                    placeholder="#username or .input-field"
-                />
-              </div>
-              <div className="form-field">
-                <label>Text:</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).text || ''}
-                    onChange={(e) => handleFieldChange('text', e.target.value)}
-                    placeholder="Text to type..."
-                />
-              </div>
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).takeScreenshot || false}
-                      onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
-                  />
-                  Take screenshot after this step
-                </label>
-              </div>
-            </div>
-        );
-      case TestStepType.CLICK:
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>Selector:</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).selector || ''}
-                    onChange={(e) => handleFieldChange('selector', e.target.value)}
-                    placeholder="#button or .btn-submit"
-                />
-              </div>
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).takeScreenshot || false}
-                      onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
-                  />
-                  Take screenshot after this step
-                </label>
-              </div>
-            </div>
-        );
-      case TestStepType.ASSERT_TEXT:
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>Selector:</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).selector || ''}
-                    onChange={(e) => handleFieldChange('selector', e.target.value)}
-                    placeholder="#element or .text-content"
-                />
-              </div>
-              <div className="form-field">
-                <label>Expected text:</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).text || ''}
-                    onChange={(e) => handleFieldChange('text', e.target.value)}
-                    placeholder="Text to assert..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).exactMatch || false}
-                      onChange={(e) => handleFieldChange('exactMatch', e.target.checked)}
-                  />
-                  Exact match
-                </label>
-              </div>
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).takeScreenshot || false}
-                      onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
-                  />
-                  Take screenshot after this step
-                </label>
-              </div>
-            </div>
-        );
-      case TestStepType.ASSERT_VISIBLE:
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>Selector:</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).selector || ''}
-                    onChange={(e) => handleFieldChange('selector', e.target.value)}
-                    placeholder="#element or .visible-content"
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).shouldBeVisible !== false}
-                      onChange={(e) => handleFieldChange('shouldBeVisible', e.target.checked)}
-                  />
-                  Element should be visible
-                </label>
-              </div>
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).takeScreenshot || false}
-                      onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
-                  />
-                  Take screenshot after this step
-                </label>
-              </div>
-            </div>
-        );
-      case TestStepType.WAIT:
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>Wait time (milliseconds):</label>
-                <input
-                    type="number"
-                    value={(editableStep as any).milliseconds || 1000}
-                    onChange={(e) => handleFieldChange('milliseconds', parseInt(e.target.value) || 1000)}
-                    min="100"
-                    max="30000"
-                />
-              </div>
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).takeScreenshot || false}
-                      onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
-                  />
-                  Take screenshot after this step
-                </label>
-              </div>
-            </div>
-        );
-      case TestStepType.ASSERT_URL:
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>Expected URL:</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).url || ''}
-                    onChange={(e) => handleFieldChange('url', e.target.value)}
-                    placeholder="https://example.com/expected-page"
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).exactMatch || false}
-                      onChange={(e) => handleFieldChange('exactMatch', e.target.checked)}
-                  />
-                  Exact match
-                </label>
-              </div>
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).takeScreenshot || false}
-                      onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
-                  />
-                  Take screenshot after this step
-                </label>
-              </div>
-            </div>
-        );
-      case TestStepType.SCREENSHOT:
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>Screenshot name (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).name || ''}
-                    onChange={(e) => handleFieldChange('name', e.target.value)}
-                    placeholder="Name for the screenshot"
-                />
-              </div>
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-            </div>
-        );
-      default:
-        // Fallback for unknown step types - treat as any step with basic fields
-        return (
-            <div className="edit-form">
-              <div className="form-field">
-                <label>Description (optional):</label>
-                <input
-                    type="text"
-                    value={(editableStep as any).description || ''}
-                    onChange={(e) => handleFieldChange('description', e.target.value)}
-                    placeholder="Describe this step..."
-                />
-              </div>
-              <div className="form-field checkbox-field">
-                <label className="checkbox-label">
-                  <input
-                      type="checkbox"
-                      checked={(editableStep as any).takeScreenshot || false}
-                      onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
-                  />
-                  Take screenshot after this step
-                </label>
-              </div>
-            </div>
-        );
-    }
-  };
+    const getStepSummary = () => {
+        const currentStep = isEditing ? editableStep : step;
+        switch (currentStep.type) {
+            case TestStepType.NAVIGATE:
+                return (currentStep as any).url || 'Enter URL...';
+            case TestStepType.INPUT:
+                return `${(currentStep as any).selector || 'selector'}: "${(currentStep as any).text || 'text'}"`;
+            case TestStepType.CLICK:
+                return (currentStep as any).selector || 'Enter selector...';
+            case TestStepType.ASSERT_TEXT:
+                return `${(currentStep as any).selector || 'selector'}: "${(currentStep as any).text || 'text'}"`;
+            case TestStepType.ASSERT_VISIBLE:
+                return (currentStep as any).selector || 'Enter selector...';
+            case TestStepType.WAIT:
+                return `${(currentStep as any).milliseconds || 1000}ms`;
+            case TestStepType.ASSERT_URL:
+                return (currentStep as any).url || 'Enter URL...';
+            case TestStepType.SCREENSHOT:
+                return (currentStep as any).name || 'Screenshot';
+            default:
+                return '';
+        }
+    };
 
-  return (
-      <div
-          ref={ref}
-          data-handler-id={handlerId}
-          className={`step-card ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
-      >
-        <div className="step-number">{index + 1}</div>
+    const renderEditForm = () => {
+        switch (editableStep.type) {
+            case TestStepType.NAVIGATE:
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>URL:</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).url || ''}
+                                onChange={(e) => handleFieldChange('url', e.target.value)}
+                                placeholder="https://example.com"
+                            />
+                        </div>
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).takeScreenshot || false}
+                                    onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
+                                />
+                                Take screenshot after this step
+                            </label>
+                        </div>
+                    </div>
+                );
+            case TestStepType.INPUT:
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>Selector:</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).selector || ''}
+                                onChange={(e) => handleFieldChange('selector', e.target.value)}
+                                placeholder="#username or .input-field"
+                            />
+                        </div>
+                        <div className="form-field">
+                            <label>Text:</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).text || ''}
+                                onChange={(e) => handleFieldChange('text', e.target.value)}
+                                placeholder="Text to type..."
+                            />
+                        </div>
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).takeScreenshot || false}
+                                    onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
+                                />
+                                Take screenshot after this step
+                            </label>
+                        </div>
+                    </div>
+                );
+            case TestStepType.CLICK:
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>Selector:</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).selector || ''}
+                                onChange={(e) => handleFieldChange('selector', e.target.value)}
+                                placeholder="#button or .btn-submit"
+                            />
+                        </div>
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).takeScreenshot || false}
+                                    onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
+                                />
+                                Take screenshot after this step
+                            </label>
+                        </div>
+                    </div>
+                );
+            case TestStepType.ASSERT_TEXT:
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>Selector:</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).selector || ''}
+                                onChange={(e) => handleFieldChange('selector', e.target.value)}
+                                placeholder="#element or .text-content"
+                            />
+                        </div>
+                        <div className="form-field">
+                            <label>Expected text:</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).text || ''}
+                                onChange={(e) => handleFieldChange('text', e.target.value)}
+                                placeholder="Text to assert..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).exactMatch || false}
+                                    onChange={(e) => handleFieldChange('exactMatch', e.target.checked)}
+                                />
+                                Exact match
+                            </label>
+                        </div>
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).takeScreenshot || false}
+                                    onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
+                                />
+                                Take screenshot after this step
+                            </label>
+                        </div>
+                    </div>
+                );
+            case TestStepType.ASSERT_VISIBLE:
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>Selector:</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).selector || ''}
+                                onChange={(e) => handleFieldChange('selector', e.target.value)}
+                                placeholder="#element or .visible-content"
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).shouldBeVisible !== false}
+                                    onChange={(e) => handleFieldChange('shouldBeVisible', e.target.checked)}
+                                />
+                                Element should be visible
+                            </label>
+                        </div>
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).takeScreenshot || false}
+                                    onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
+                                />
+                                Take screenshot after this step
+                            </label>
+                        </div>
+                    </div>
+                );
+            case TestStepType.WAIT:
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>Wait time (milliseconds):</label>
+                            <input
+                                type="number"
+                                value={(editableStep as any).milliseconds || 1000}
+                                onChange={(e) => handleFieldChange('milliseconds', parseInt(e.target.value) || 1000)}
+                                min="100"
+                                max="30000"
+                            />
+                        </div>
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).takeScreenshot || false}
+                                    onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
+                                />
+                                Take screenshot after this step
+                            </label>
+                        </div>
+                    </div>
+                );
+            case TestStepType.ASSERT_URL:
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>Expected URL:</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).url || ''}
+                                onChange={(e) => handleFieldChange('url', e.target.value)}
+                                placeholder="https://example.com/expected-page"
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).exactMatch || false}
+                                    onChange={(e) => handleFieldChange('exactMatch', e.target.checked)}
+                                />
+                                Exact match
+                            </label>
+                        </div>
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).takeScreenshot || false}
+                                    onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
+                                />
+                                Take screenshot after this step
+                            </label>
+                        </div>
+                    </div>
+                );
+            case TestStepType.SCREENSHOT:
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>Screenshot name (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).name || ''}
+                                onChange={(e) => handleFieldChange('name', e.target.value)}
+                                placeholder="Name for the screenshot"
+                            />
+                        </div>
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                    </div>
+                );
+            default:
+                // Fallback for unknown step types - treat as any step with basic fields
+                return (
+                    <div className="edit-form">
+                        <div className="form-field">
+                            <label>Description (optional):</label>
+                            <input
+                                type="text"
+                                value={(editableStep as any).description || ''}
+                                onChange={(e) => handleFieldChange('description', e.target.value)}
+                                placeholder="Describe this step..."
+                            />
+                        </div>
+                        <div className="form-field checkbox-field">
+                            <label className="checkbox-label">
+                                <input
+                                    type="checkbox"
+                                    checked={(editableStep as any).takeScreenshot || false}
+                                    onChange={(e) => handleFieldChange('takeScreenshot', e.target.checked)}
+                                />
+                                Take screenshot after this step
+                            </label>
+                        </div>
+                    </div>
+                );
+        }
+    };
 
-        <div className="step-content">
-          <div className="step-header">
-            <div className="step-type">
-              {!isEditing && <span className="drag-handle">⋮⋮</span>}
-              <span className="step-icon">{StepIcons[step.type]}</span>
-              <span className="step-label">{StepLabels[step.type]}</span>
-              {(step as any).takeScreenshot && <span className="screenshot-indicator" title="Screenshot enabled">📷</span>}
-            </div>
+    return (
+        <div
+            ref={ref}
+            data-handler-id={handlerId}
+            className={`step-card ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
+        >
+            <div className="step-number">{index + 1}</div>
 
-            {!isEditing && (
-                <div className="step-actions">
-                  {onMoveUp && (
-                      <button onClick={onMoveUp} className="step-action-button" title="Move up">
-                        <span className="action-icon">↑</span>
-                      </button>
-                  )}
-                  {onMoveDown && (
-                      <button onClick={onMoveDown} className="step-action-button" title="Move down">
-                        <span className="action-icon">↓</span>
-                      </button>
-                  )}
-                  <button onClick={onEdit} className="step-action-button" title="Edit">
-                    <span className="action-icon">✏️</span>
-                  </button>
-                  <button onClick={onDelete} className="step-action-button delete-button" title="Delete">
-                    <span className="action-icon">🗑️</span>
-                  </button>
+            <div className="step-content">
+                <div className="step-header">
+                    <div className="step-type">
+                        {!isEditing && <span className="drag-handle">⋮⋮</span>}
+                        <span className="step-icon">{StepIcons[step.type]}</span>
+                        <span className="step-label">{StepLabels[step.type]}</span>
+                        {(step as any).takeScreenshot &&
+                            <span className="screenshot-indicator" title="Screenshot enabled">📷</span>}
+                    </div>
+
+                    {!isEditing && (
+                        <div className="step-actions">
+                            {onMoveUp && (
+                                <button onClick={onMoveUp} className="step-action-button" title="Move up">
+                                    <span className="action-icon">↑</span>
+                                </button>
+                            )}
+                            {onMoveDown && (
+                                <button onClick={onMoveDown} className="step-action-button" title="Move down">
+                                    <span className="action-icon">↓</span>
+                                </button>
+                            )}
+                            <button onClick={onEdit} className="step-action-button" title="Edit">
+                                <span className="action-icon">✏️</span>
+                            </button>
+                            <button onClick={onDelete} className="step-action-button delete-button" title="Delete">
+                                <span className="action-icon">🗑️</span>
+                            </button>
+                        </div>
+                    )}
                 </div>
-            )}
-          </div>
 
-          {isEditing ? (
-              <>
-                {renderEditForm()}
-                <div className="edit-actions">
-                  <button onClick={handleSave} className="save-button">
-                    Save
-                  </button>
-                  <button onClick={onCancel} className="cancel-button">
-                    Cancel
-                  </button>
-                </div>
-              </>
-          ) : (
-              <>
-                <div className="step-summary">{getStepSummary()}</div>
-                {(step as any).description && (
-                    <div className="step-description">{(step as any).description}</div>
+                {isEditing ? (
+                    <>
+                        {renderEditForm()}
+                        <div className="edit-actions">
+                            <button onClick={handleSave} className="save-button">
+                                Save
+                            </button>
+                            <button onClick={onCancel} className="cancel-button">
+                                Cancel
+                            </button>
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div className="step-summary">{getStepSummary()}</div>
+                        {(step as any).description && (
+                            <div className="step-description">{(step as any).description}</div>
+                        )}
+                    </>
                 )}
-              </>
-          )}
-        </div>
+            </div>
 
-        <style>
-          {`
+            <style>
+                {`
           .step-card {
             display: flex;
             gap: 12px;
@@ -864,9 +865,9 @@ const StepCard: React.FC<StepCardProps> = ({
             color: #374151;
           }
         `}
-        </style>
-      </div>
-  );
+            </style>
+        </div>
+    );
 };
 
 export default StepCard;

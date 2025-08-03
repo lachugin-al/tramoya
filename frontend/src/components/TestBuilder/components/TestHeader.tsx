@@ -1,9 +1,9 @@
 import React from 'react';
-import { useNavigate } from 'react-router-dom';
+import {useNavigate} from 'react-router-dom';
 
 /**
  * Props for the TestHeader component
- * 
+ *
  * @interface TestHeaderProps
  * @property {string} testName - The current name of the test
  * @property {function} onTestNameChange - Callback function when the test name is changed
@@ -11,23 +11,23 @@ import { useNavigate } from 'react-router-dom';
  * @property {boolean} saving - Whether the test is currently being saved
  */
 interface TestHeaderProps {
-  testName: string;
-  onTestNameChange: (name: string) => void;
-  onSave: () => void;
-  saving: boolean;
+    testName: string;
+    onTestNameChange: (name: string) => void;
+    onSave: () => void;
+    saving: boolean;
 }
 
 /**
  * TestHeader Component
- * 
+ *
  * @component
  * @description Renders the header section of the test builder interface.
  * Includes a back button to return to the tests list, an input field for editing
  * the test name, and a save button.
- * 
+ *
  * @param {TestHeaderProps} props - Component props
  * @returns {JSX.Element} The rendered header component
- * 
+ *
  * @example
  * ```tsx
  * <TestHeader
@@ -39,47 +39,47 @@ interface TestHeaderProps {
  * ```
  */
 const TestHeader: React.FC<TestHeaderProps> = ({
-  testName,
-  onTestNameChange,
-  onSave,
-  saving
-}) => {
-  /**
-   * Navigation function from React Router
-   */
-  const navigate = useNavigate();
+                                                   testName,
+                                                   onTestNameChange,
+                                                   onSave,
+                                                   saving
+                                               }) => {
+    /**
+     * Navigation function from React Router
+     */
+    const navigate = useNavigate();
 
-  return (
-    <div className="test-builder-header">
-      <button
-        onClick={() => navigate('/')}
-        className="header-button"
-        title="Back to Tests"
-      >
-        <span className="icon">←</span>
-      </button>
-      
-      <input
-        type="text"
-        value={testName}
-        onChange={(e) => onTestNameChange(e.target.value)}
-        placeholder="Untitled Test"
-        className="test-name-input"
-      />
-      
-      <div className="header-actions">
-        <button
-          onClick={onSave}
-          className="header-button action-button save-button"
-          disabled={saving || !testName.trim()}
-        >
-          <span className="icon">💾</span>
-          {saving ? 'Saving...' : 'Save'}
-        </button>
-      </div>
+    return (
+        <div className="test-builder-header">
+            <button
+                onClick={() => navigate('/')}
+                className="header-button"
+                title="Back to Tests"
+            >
+                <span className="icon">←</span>
+            </button>
 
-      <style>
-        {`
+            <input
+                type="text"
+                value={testName}
+                onChange={(e) => onTestNameChange(e.target.value)}
+                placeholder="Untitled Test"
+                className="test-name-input"
+            />
+
+            <div className="header-actions">
+                <button
+                    onClick={onSave}
+                    className="header-button action-button save-button"
+                    disabled={saving || !testName.trim()}
+                >
+                    <span className="icon">💾</span>
+                    {saving ? 'Saving...' : 'Save'}
+                </button>
+            </div>
+
+            <style>
+                {`
           .header-button {
             display: flex;
             align-items: center;
@@ -149,9 +149,9 @@ const TestHeader: React.FC<TestHeaderProps> = ({
             border-color: #2563eb;
           }
         `}
-      </style>
-    </div>
-  );
+            </style>
+        </div>
+    );
 };
 
 export default TestHeader;

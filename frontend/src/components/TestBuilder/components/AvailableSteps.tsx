@@ -1,28 +1,27 @@
-
-import React, { useState } from 'react';
-import { TestStepType } from '../../../types';
+import React, {useState} from 'react';
+import {TestStepType} from '../../../types';
 
 /**
  * Template definitions for available test step types
- * 
+ *
  * @constant
  * @type {Array<{type: TestStepType, icon: string, label: string, description: string}>}
  * @description Array of step templates that users can add to their tests
  */
 const StepTemplates = [
-    { type: TestStepType.NAVIGATE, icon: '🌐', label: 'Navigate', description: 'Go to URL' },
-    { type: TestStepType.INPUT, icon: '⌨️', label: 'Type text', description: 'Enter text in field' },
-    { type: TestStepType.CLICK, icon: '🖱️', label: 'Click', description: 'Click element' },
-    { type: TestStepType.ASSERT_TEXT, icon: '📝', label: 'Assert text', description: 'Check text content' },
-    { type: TestStepType.ASSERT_VISIBLE, icon: '👁️', label: 'Assert visible', description: 'Check visibility' },
-    { type: TestStepType.WAIT, icon: '⏱️', label: 'Wait', description: 'Pause execution' },
-    { type: TestStepType.ASSERT_URL, icon: '🔗', label: 'Assert URL', description: 'Check current URL' },
-    { type: TestStepType.SCREENSHOT, icon: '📷', label: 'Screenshot', description: 'Take screenshot' },
+    {type: TestStepType.NAVIGATE, icon: '🌐', label: 'Navigate', description: 'Go to URL'},
+    {type: TestStepType.INPUT, icon: '⌨️', label: 'Type text', description: 'Enter text in field'},
+    {type: TestStepType.CLICK, icon: '🖱️', label: 'Click', description: 'Click element'},
+    {type: TestStepType.ASSERT_TEXT, icon: '📝', label: 'Assert text', description: 'Check text content'},
+    {type: TestStepType.ASSERT_VISIBLE, icon: '👁️', label: 'Assert visible', description: 'Check visibility'},
+    {type: TestStepType.WAIT, icon: '⏱️', label: 'Wait', description: 'Pause execution'},
+    {type: TestStepType.ASSERT_URL, icon: '🔗', label: 'Assert URL', description: 'Check current URL'},
+    {type: TestStepType.SCREENSHOT, icon: '📷', label: 'Screenshot', description: 'Take screenshot'},
 ];
 
 /**
  * Props for the AvailableSteps component
- * 
+ *
  * @interface AvailableStepsProps
  * @property {function} [onSelectStepType] - Callback function when a step type is selected
  * @property {boolean} [compact=false] - Whether to display the component in compact mode
@@ -34,16 +33,16 @@ interface AvailableStepsProps {
 
 /**
  * AvailableSteps Component
- * 
+ *
  * @component
  * @description Displays a list of available test step types that users can add to their test.
  * The component can be displayed in two modes:
  * - Normal mode: A collapsible section with a toggle button
  * - Compact mode: A simple list of steps
- * 
+ *
  * @param {AvailableStepsProps} props - Component props
  * @returns {JSX.Element} The rendered component
- * 
+ *
  * @example
  * ```tsx
  * <AvailableSteps 
@@ -52,7 +51,7 @@ interface AvailableStepsProps {
  * />
  * ```
  */
-const AvailableSteps: React.FC<AvailableStepsProps> = ({ onSelectStepType, compact = false }) => {
+const AvailableSteps: React.FC<AvailableStepsProps> = ({onSelectStepType, compact = false}) => {
     /**
      * State to track whether the list of steps is expanded or collapsed
      * Defaults to expanded in normal mode and collapsed in compact mode
@@ -61,7 +60,7 @@ const AvailableSteps: React.FC<AvailableStepsProps> = ({ onSelectStepType, compa
 
     /**
      * Handles selection of a step type
-     * 
+     *
      * @function handleSelectStep
      * @param {TestStepType} type - The selected step type
      */
