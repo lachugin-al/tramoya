@@ -225,9 +225,10 @@ export const createLogger = (moduleName: string): CustomLogger => {
             }),
 
             // Write all logs with level 'debug' and below to debug.log
+            // Note: 'trace' level is also included here since we want to capture trace logs
             new winston.transports.File({
                 filename: path.join(logDir, 'debug.log'),
-                level: 'debug'
+                level: 'trace'
             })
         ]
     });
