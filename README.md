@@ -7,18 +7,24 @@ Tramoya is a web-based service that allows users without programming skills to c
 - **Visual Test Builder**: Drag-and-drop interface for creating test scenarios without writing code
 - **Ready-to-use Test Blocks**: Navigate to URLs, click elements, input text, assert content, and more
 - **One-click Test Execution**: Run tests with a single click and get real-time status updates
-- **Detailed Test Reports**: View comprehensive test results with logs and screenshots
+- **Detailed Test Reports**: View comprehensive test results with logs, screenshots, videos, and traces
 - **CSS and XPath Selectors**: Support for both selector types for element targeting
 - **Screenshot Capture**: Automatic screenshots on errors or as configured in test steps
+- **Video Recording**: Full video capture of test execution for debugging
+- **Playwright Tracing**: Detailed trace files for advanced debugging
+- **Real-time Updates**: Live updates during test execution via Server-Sent Events and WebSockets
+- **Browser Selection**: Choose which browser to use for test execution
 - **Test History**: Track and manage previous test executions
 
 ## Architecture
 
-Tramoya consists of three main components:
+Tramoya consists of five main components:
 
-1. **Frontend**: React application with TypeScript and drag-and-drop functionality
-2. **Backend**: Node.js server with TypeScript and Playwright for browser automation
-3. **Storage**: Minio (S3-compatible) for storing test artifacts (screenshots, logs)
+1. **Frontend**: React application with TypeScript and drag-and-drop functionality (using React DnD)
+2. **Gateway**: Node.js API server with TypeScript for handling HTTP requests
+3. **Runner**: Node.js worker service with Playwright for browser automation
+4. **Redis**: For job queue management (using BullMQ) and real-time event publishing
+5. **Storage**: Minio (S3-compatible) for storing test artifacts (screenshots, videos, logs, traces)
 
 All components are containerized using Docker and can be launched with a single `docker-compose up -d` command.
 
@@ -27,11 +33,13 @@ All components are containerized using Docker and can be launched with a single 
 The project uses Docker Compose to orchestrate the following services:
 
 - **Frontend**: Runs on port 80, built with Vite and served by Nginx
-- **Backend**: Runs on port 3001 (mapped to internal port 3001)
+- **Gateway**: Backend API service running on port 3001
+- **Runner**: Backend worker service for test execution
+- **Redis**: Runs on port 6379, used for job queues and pub/sub
 - **Minio**: Runs on port 9000 for the API and 9001 for the web console
 - **CreateBuckets**: A service that initializes the required Minio bucket
 
-The frontend communicates with the backend through the `/api` proxy configured in Nginx.
+The frontend communicates with the backend through the `/api` proxy configured in Nginx. The gateway and runner services communicate through Redis job queues and pub/sub channels.
 
 ## Getting Started
 
@@ -102,8 +110,9 @@ The frontend communicates with the backend through the `/api` proxy configured i
 
 1. Navigate to the "Tests" page
 2. Find the test you want to run
-3. Click the "Run Test" button
-4. You'll be redirected to the results page where you can see real-time updates
+3. Select the browser you want to use (Chrome, Firefox, or WebKit)
+4. Click the "Run Test" button
+5. You'll be redirected to the results page where you can see real-time updates
 
 ### Viewing Test Results
 
@@ -111,6 +120,8 @@ The frontend communicates with the backend through the `/api` proxy configured i
    - Overall test status (Pending, Running, Passed, Failed, Error)
    - Summary statistics (total steps, passed, failed, etc.)
    - Detailed results for each step
+   - Video recording of the entire test execution
+   - Playwright trace for detailed debugging
 2. Click on a step to expand and see:
    - Step details
    - Error messages (if any)
@@ -193,6 +204,13 @@ All API endpoints are accessible at `http://localhost:3001/api/v1` when running 
 - `GET /api/v1/tests/:id/results` - Get all results for a specific test
 - `DELETE /api/v1/tests/results/:id` - Delete a test result
 
+#### Real-time Updates
+
+The backend provides real-time updates during test execution through:
+
+- Server-Sent Events (SSE) at `/api/v1/stream/tests/:runId`
+- WebSocket events on the `test-events` channel
+
 ## License
 
 This project is licensed under the MIT License - see the LICENSE file for details.
@@ -202,3 +220,5 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - [Playwright](https://playwright.dev/) for browser automation
 - [React DnD](https://react-dnd.github.io/react-dnd/) for drag-and-drop functionality
 - [Minio](https://min.io/) for S3-compatible storage
+- [BullMQ](https://docs.bullmq.io/) for job queue management
+- [Redis](https://redis.io/) for pub/sub and job queue backend
