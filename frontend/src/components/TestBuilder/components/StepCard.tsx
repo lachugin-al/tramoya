@@ -1,42 +1,7 @@
 import React, {useRef, useState, useEffect} from 'react';
 import {useDrag, useDrop, DropTargetMonitor} from 'react-dnd';
 import {TestStep, TestStepType} from '../../../types';
-
-/**
- * Icons for each test step type
- *
- * @constant
- * @type {Record<TestStepType, string>}
- * @description Emoji icons representing each type of test step
- */
-const StepIcons: Record<TestStepType, string> = {
-    [TestStepType.NAVIGATE]: '🌐',
-    [TestStepType.INPUT]: '⌨️',
-    [TestStepType.CLICK]: '🖱️',
-    [TestStepType.ASSERT_TEXT]: '📝',
-    [TestStepType.ASSERT_VISIBLE]: '👁️',
-    [TestStepType.WAIT]: '⏱️',
-    [TestStepType.ASSERT_URL]: '🔗',
-    [TestStepType.SCREENSHOT]: '📷',
-};
-
-/**
- * Display labels for each test step type
- *
- * @constant
- * @type {Record<TestStepType, string>}
- * @description Human-readable labels for each type of test step
- */
-const StepLabels: Record<TestStepType, string> = {
-    [TestStepType.NAVIGATE]: 'Navigate',
-    [TestStepType.INPUT]: 'Type text',
-    [TestStepType.CLICK]: 'Click',
-    [TestStepType.ASSERT_TEXT]: 'Assert text',
-    [TestStepType.ASSERT_VISIBLE]: 'Assert visible',
-    [TestStepType.WAIT]: 'Wait',
-    [TestStepType.ASSERT_URL]: 'Assert URL',
-    [TestStepType.SCREENSHOT]: 'Screenshot',
-};
+import {StepIcons, StepLabels} from '../../../constants/stepTypeMetadata';
 
 /**
  * Props for the StepCard component

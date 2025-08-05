@@ -3,23 +3,7 @@ import {DndProvider} from 'react-dnd';
 import {HTML5Backend} from 'react-dnd-html5-backend';
 import {TestStep, TestStepType} from '../../../types';
 import StepCard from './StepCard';
-
-/**
- * Templates for available test step types that can be added to a test scenario
- * Each template includes an icon, label, and description for display in the UI
- *
- * @constant {Array<{type: TestStepType, icon: string, label: string, description: string}>}
- */
-const StepTemplates = [
-    {type: TestStepType.NAVIGATE, icon: '🌐', label: 'Navigate', description: 'Go to URL'},
-    {type: TestStepType.INPUT, icon: '⌨️', label: 'Type text', description: 'Enter text in field'},
-    {type: TestStepType.CLICK, icon: '🖱️', label: 'Click', description: 'Click element'},
-    {type: TestStepType.ASSERT_TEXT, icon: '📝', label: 'Assert text', description: 'Check text content'},
-    {type: TestStepType.ASSERT_VISIBLE, icon: '👁️', label: 'Assert visible', description: 'Check visibility'},
-    {type: TestStepType.WAIT, icon: '⏱️', label: 'Wait', description: 'Pause execution'},
-    {type: TestStepType.ASSERT_URL, icon: '🔗', label: 'Assert URL', description: 'Check current URL'},
-    {type: TestStepType.SCREENSHOT, icon: '📷', label: 'Screenshot', description: 'Take screenshot'},
-];
+import {StepTemplates} from '../../../constants/stepTypeMetadata';
 
 /**
  * Props for the StepsPanel component
