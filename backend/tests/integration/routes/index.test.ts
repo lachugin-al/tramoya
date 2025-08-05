@@ -7,6 +7,7 @@ import { QueueService } from '../../../src/services/queue-service';
 import testRoutes from '../../../src/routes/test-routes';
 import runRoutes from '../../../src/routes/run-routes';
 import streamRoutes from '../../../src/routes/stream-routes';
+import traceViewerRoutes from '../../../src/routes/trace-viewer-routes';
 
 // Partially mock the services and routes
 jest.mock('../../../src/services/minio-service', () => {
@@ -51,6 +52,14 @@ jest.mock('../../../src/routes/stream-routes', () => {
   return jest.fn().mockImplementation(() => {
     const router = express.Router();
     router.get('/test', (req, res) => res.status(200).json({ route: 'stream' }));
+    return router;
+  });
+});
+
+jest.mock('../../../src/routes/trace-viewer-routes', () => {
+  return jest.fn().mockImplementation(() => {
+    const router = express.Router();
+    router.get('/test', (req, res) => res.status(200).json({ route: 'trace-viewer' }));
     return router;
   });
 });
@@ -113,6 +122,7 @@ describe('Routes Index Integration Tests', () => {
       expect(testRoutes).toHaveBeenCalledWith(minioService, redisService, queueService);
       expect(runRoutes).toHaveBeenCalledWith(minioService, redisService, queueService);
       expect(streamRoutes).toHaveBeenCalledWith(redisService);
+      expect(traceViewerRoutes).toHaveBeenCalledWith(minioService);
     });
     
     it('should register route handlers with the correct paths', async () => {
@@ -133,6 +143,11 @@ describe('Routes Index Integration Tests', () => {
       const streamResponse = await request(app).get('/api/v1/stream/test');
       expect(streamResponse.status).toBe(200);
       expect(streamResponse.body).toEqual({ route: 'stream' });
+      
+      // Test trace viewer routes
+      const traceViewerResponse = await request(app).get('/api/v1/trace-viewer/test');
+      expect(traceViewerResponse.status).toBe(200);
+      expect(traceViewerResponse.body).toEqual({ route: 'trace-viewer' });
     });
     
     it('should return route handlers for external access', () => {
@@ -143,7 +158,8 @@ describe('Routes Index Integration Tests', () => {
       expect(result).toEqual({
         testRoutes: expect.any(Function),
         runRoutes: expect.any(Function),
-        streamRoutes: expect.any(Function)
+        streamRoutes: expect.any(Function),
+        traceViewerRoutes: expect.any(Function)
       });
     });
   });
