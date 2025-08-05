@@ -3,6 +3,7 @@ import {TestStatus, TestResult, Screenshot} from '../../../types';
 import {debugLog, debugError, verifyImageUrl} from '../../../utils/debug';
 import DebugPanel from './DebugPanel';
 import {useTraceViewer} from '../../../hooks/useTraceViewer';
+import TraceViewer from '../../TraceViewer/TraceViewer';
 
 /**
  * Props for the PreviewPanel component
@@ -117,25 +118,52 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
     const [showDebug, setShowDebug] = useState(false);
     
     /**
+     * State to track whether to show the trace viewer
+     */
+    const [showTraceViewer, setShowTraceViewer] = useState(false);
+    
+    /**
+     * State to store the current trace ID
+     */
+    const [currentTraceId, setCurrentTraceId] = useState<string | null>(null);
+    
+    /**
      * Hook for managing trace viewer sessions
      */
-    const { loading, error, startSessionByUrl } = useTraceViewer(null);
+    const { loading, error } = useTraceViewer(null);
     
     /**
      * Handles opening the trace viewer
      * 
      * @function handleOpenTraceViewer
      * @description Starts a trace viewer session for the current test result's trace
-     * and opens it in a new window
+     * and displays it in the preview panel
      */
     const handleOpenTraceViewer = async () => {
         if (testResult && testResult.traceUrl) {
-            const newSession = await startSessionByUrl(testResult.traceUrl);
-            if (newSession) {
-                // Open trace viewer in a new window
-                window.open(newSession.url, '_blank');
+            // Extract the trace ID from the URL
+            // URL format: /storage/runs/{runId}/trace.zip
+            const match = testResult.traceUrl.match(/\/runs\/(.+)\/trace\.zip/);
+            if (match && match[1]) {
+                const traceId = match[1];
+                setCurrentTraceId(traceId);
+                setShowTraceViewer(true);
+                debugLog('PreviewPanel', `Opening trace viewer for trace ID: ${traceId}`);
+            } else {
+                debugError('PreviewPanel', `Failed to extract trace ID from URL: ${testResult.traceUrl}`);
             }
         }
+    };
+    
+    /**
+     * Handles closing the trace viewer
+     * 
+     * @function handleCloseTraceViewer
+     * @description Closes the trace viewer and returns to the screenshots view
+     */
+    const handleCloseTraceViewer = () => {
+        setShowTraceViewer(false);
+        setCurrentTraceId(null);
     };
 
     /**
@@ -387,7 +415,25 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                     </div>
 
                     <div className="browser-viewport">
-                        {testStatus === TestStatus.RUNNING && !currentStepScreenshots.length ? (
+                        {showTraceViewer && currentTraceId ? (
+                            <div className="trace-viewer-container">
+                                <div className="trace-viewer-header">
+                                    <h3>Playwright Trace Viewer</h3>
+                                    <button 
+                                        onClick={handleCloseTraceViewer}
+                                        className="close-button"
+                                    >
+                                        ✕
+                                    </button>
+                                </div>
+                                <div className="trace-viewer-content">
+                                    <TraceViewer 
+                                        traceId={currentTraceId} 
+                                        onClose={handleCloseTraceViewer}
+                                    />
+                                </div>
+                            </div>
+                        ) : testStatus === TestStatus.RUNNING && !currentStepScreenshots.length ? (
                             <div className="loading-state">
                                 <div className="loading-spinner"></div>
                                 <p>Test is running...</p>
@@ -792,6 +838,59 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
           .step-counter {
             font-size: 14px;
             color: #6b7280;
+          }
+          
+          /* Trace Viewer Styles */
+          .trace-viewer-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            height: 100%;
+            background: white;
+            border-radius: 4px;
+            overflow: hidden;
+          }
+          
+          .trace-viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 16px;
+            background: #f3f4f6;
+            border-bottom: 1px solid #e5e7eb;
+          }
+          
+          .trace-viewer-header h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+          }
+          
+          .trace-viewer-content {
+            flex: 1;
+            overflow: hidden;
+          }
+          
+          .close-button {
+            background: none;
+            border: none;
+            color: #6b7280;
+            font-size: 18px;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 24px;
+            height: 24px;
+            transition: all 0.2s;
+          }
+          
+          .close-button:hover {
+            background: #e5e7eb;
+            color: #374151;
           }
         `}
             </style>

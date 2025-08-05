@@ -373,25 +373,53 @@ const TestResults: React.FC = () => {
             
             {/* Trace Viewer */}
             {showTraceViewer && (
-                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-                    <div className="w-full max-w-6xl h-5/6 bg-white rounded-lg overflow-hidden shadow-xl">
-                        <div className="p-4 bg-gray-100 border-b flex justify-between items-center">
-                            <h3 className="text-xl font-bold">Playwright Trace Viewer</h3>
-                            <button 
-                                onClick={() => setShowTraceViewer(false)}
-                                className="text-gray-500 hover:text-gray-700"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                            </button>
-                        </div>
-                        <div className="h-full">
-                            <TraceViewer traceId={id || ''} />
-                        </div>
+                <div className="preview-panel-container">
+                    <div className="preview-panel-header">
+                        <h3 className="text-xl font-bold">Playwright Trace Viewer</h3>
+                        <button 
+                            onClick={() => setShowTraceViewer(false)}
+                            className="text-gray-500 hover:text-gray-700"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                    <div className="preview-panel-content">
+                        <TraceViewer traceId={id || ''} />
                     </div>
                 </div>
             )}
+            
+            {/* Preview Panel Styles */}
+            <style>{`
+                .preview-panel-container {
+                    display: flex;
+                    flex-direction: column;
+                    width: 100%;
+                    height: 600px;
+                    border: 1px solid #e5e7eb;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    margin-top: 20px;
+                    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+                }
+                
+                .preview-panel-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    padding: 12px 16px;
+                    background: #f3f4f6;
+                    border-bottom: 1px solid #e5e7eb;
+                }
+                
+                .preview-panel-content {
+                    flex: 1;
+                    overflow: hidden;
+                    background: white;
+                }
+            `}</style>
         </div>
     );
 };
