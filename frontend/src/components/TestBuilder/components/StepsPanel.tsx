@@ -25,6 +25,7 @@ interface StepsPanelProps {
     onAddStep: (stepType: TestStepType) => void;
     onUpdateStep: (index: number, step: TestStep) => void;
     editingStepIndex?: number;
+    stepStatuses?: Record<string, string>; // Map of step IDs to their statuses
 }
 
 /**
@@ -63,7 +64,8 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
                                                    onMoveStep,
                                                    onAddStep,
                                                    onUpdateStep,
-                                                   editingStepIndex
+                                                   editingStepIndex,
+                                                   stepStatuses = {}
                                                }) => {
     /**
      * State to control the visibility of the available steps dropdown
@@ -170,6 +172,7 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
                                     onMoveStep={onMoveStep}
                                     onMoveUp={index > 0 ? () => onMoveStep(index, index - 1) : undefined}
                                     onMoveDown={index < steps.length - 1 ? () => onMoveStep(index, index + 1) : undefined}
+                                    status={stepStatuses[step.id]}
                                 />
                             ))}
                         </div>

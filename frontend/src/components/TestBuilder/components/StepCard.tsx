@@ -29,6 +29,7 @@ interface StepCardProps {
     onMoveStep?: (fromIndex: number, toIndex: number) => void;
     onMoveUp?: () => void;
     onMoveDown?: () => void;
+    status?: string; // Step status (RUNNING, PASSED, FAILED, etc.)
 }
 
 /**

@@ -17,7 +17,8 @@ import {
     WaitStep,
     AssertUrlStep,
     ScreenshotStep,
-    TestStatus
+    TestStatus,
+    StepStatus
 } from '../../types';
 import TestBuilderLayout from './TestBuilderLayout';
 import TestHeader from './components/TestHeader';
@@ -124,6 +125,11 @@ const TestBuilder: React.FC = () => {
     const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
 
     /**
+     * State tracking the status of each step by ID
+     */
+    const [stepStatuses, setStepStatuses] = useState<Record<string, string>>({});
+
+    /**
      * Hook for real-time updates during test execution via Server-Sent Events
      */
     const {
@@ -160,8 +166,8 @@ const TestBuilder: React.FC = () => {
      * Effect hook to update test status when test results change
      *
      * @effect
-     * @description Updates the test status and current URL based on test results
-     * received from the server
+     * @description Updates the test status, step statuses, and current URL based on test results
+     * received from the server. Also updates the current step index to show the latest completed step.
      * @dependencies [testResult, test.steps]
      */
     useEffect(() => {
@@ -173,6 +179,30 @@ const TestBuilder: React.FC = () => {
             });
 
             setTestStatus(testResult.status);
+
+            // Update step statuses
+            const newStepStatuses: Record<string, string> = {};
+            testResult.stepResults.forEach(stepResult => {
+                newStepStatuses[stepResult.stepId] = stepResult.status;
+            });
+            setStepStatuses(newStepStatuses);
+            
+            logger.debug('Updated step statuses', { stepStatuses: newStepStatuses });
+
+            // Find the most recently completed step
+            let lastCompletedStepIndex = -1;
+            for (let i = 0; i < testResult.stepResults.length; i++) {
+                const stepResult = testResult.stepResults[i];
+                if (stepResult.status === StepStatus.PASSED || stepResult.status === StepStatus.FAILED) {
+                    lastCompletedStepIndex = i;
+                }
+            }
+
+            // If we found a completed step, update the current step index
+            if (lastCompletedStepIndex !== -1) {
+                logger.debug(`Setting current step index to last completed step: ${lastCompletedStepIndex}`);
+                setCurrentStepIndex(lastCompletedStepIndex);
+            }
 
             // Update current URL if there's a navigate step
             if (testResult.stepResults.length > 0) {
@@ -769,6 +799,7 @@ const TestBuilder: React.FC = () => {
                         onAddStep={handleAddStep}
                         onUpdateStep={handleUpdateStep}
                         editingStepIndex={editingIndex ?? undefined}
+                        stepStatuses={stepStatuses}
                     />
                 </div>
 
