@@ -2,6 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {TestStatus, TestResult, Screenshot} from '../../../types';
 import {debugLog, debugError, verifyImageUrl} from '../../../utils/debug';
 import DebugPanel from './DebugPanel';
+import {useTraceViewer} from '../../../hooks/useTraceViewer';
 
 /**
  * Props for the PreviewPanel component
@@ -114,6 +115,28 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
      * State to track whether to show the debug panel
      */
     const [showDebug, setShowDebug] = useState(false);
+    
+    /**
+     * Hook for managing trace viewer sessions
+     */
+    const { loading, error, startSessionByUrl } = useTraceViewer(null);
+    
+    /**
+     * Handles opening the trace viewer
+     * 
+     * @function handleOpenTraceViewer
+     * @description Starts a trace viewer session for the current test result's trace
+     * and opens it in a new window
+     */
+    const handleOpenTraceViewer = async () => {
+        if (testResult && testResult.traceUrl) {
+            const newSession = await startSessionByUrl(testResult.traceUrl);
+            if (newSession) {
+                // Open trace viewer in a new window
+                window.open(newSession.url, '_blank');
+            }
+        }
+    };
 
     /**
      * Get screenshots for the current step
@@ -307,16 +330,26 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                             {/* Show Trace Viewer button after test completion */}
                             {(testStatus === TestStatus.PASSED || testStatus === TestStatus.FAILED) &&
                                 testResult && testResult.traceUrl && (
-                                    <a
-                                        href={`https://trace.playwright.dev/?trace=${testResult.traceUrl}`}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
+                                    <button
+                                        onClick={handleOpenTraceViewer}
+                                        disabled={loading}
                                         className="control-button trace-button"
                                     >
                                         <span className="control-icon">🔍</span>
-                                        Open Trace Viewer
-                                    </a>
+                                        {loading ? 'Starting Trace Viewer...' : 'Open Trace Viewer'}
+                                    </button>
                                 )}
+                            
+                            {/* Show error message if there was an error starting the trace viewer */}
+                            {error && (
+                                <div className="error-message" style={{ 
+                                    color: '#dc2626', 
+                                    fontSize: '12px',
+                                    marginTop: '4px'
+                                }}>
+                                    Error: {error}
+                                </div>
+                            )}
                         </>
                     )}
 

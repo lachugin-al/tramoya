@@ -6,6 +6,7 @@ import {QueueService} from '../services/queue-service';
 import testRoutes from './test-routes';
 import runRoutes from './run-routes';
 import streamRoutes from './stream-routes';
+import traceViewerRoutes from './trace-viewer-routes';
 
 const logger = createLogger('routes');
 
@@ -75,6 +76,7 @@ export const setupRoutes = (
                 {path: '/api/v1/tests', description: 'Test management endpoints'},
                 {path: '/api/v1/runs', description: 'Test run management endpoints'},
                 {path: '/api/v1/stream', description: 'Real-time streaming endpoints'},
+                {path: '/api/v1/trace-viewer', description: 'Playwright Trace Viewer endpoints'},
                 {path: '/health', description: 'Health check endpoint'}
             ]
         });
@@ -84,11 +86,13 @@ export const setupRoutes = (
     const testRoutesHandler = testRoutes(minioService, redisService, queueService);
     const runRoutesHandler = runRoutes(minioService, redisService, queueService);
     const streamRoutesHandler = streamRoutes(redisService);
+    const traceViewerRoutesHandler = traceViewerRoutes(minioService);
 
     // Register all route groups
     app.use(`${apiPrefix}/tests`, testRoutesHandler);
     app.use(`${apiPrefix}/runs`, runRoutesHandler);
     app.use(`${apiPrefix}/stream`, streamRoutesHandler);
+    app.use(`${apiPrefix}/trace-viewer`, traceViewerRoutesHandler);
 
     logger.info('Routes initialized');
 
@@ -108,6 +112,7 @@ export const setupRoutes = (
     return {
         testRoutes: testRoutesHandler,
         runRoutes: runRoutesHandler,
-        streamRoutes: streamRoutesHandler
+        streamRoutes: streamRoutesHandler,
+        traceViewerRoutes: traceViewerRoutesHandler
     };
 };
