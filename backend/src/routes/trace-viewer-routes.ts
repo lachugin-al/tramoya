@@ -265,6 +265,14 @@ export default function traceViewerRoutes(
             });
         } catch (error) {
             logger.error(`Error during cleanup: ${error instanceof Error ? error.message : String(error)}`);
+            
+            // Still try to clean up inactive sessions even if cleaning up temp files fails
+            try {
+                await traceViewerService.cleanupInactiveSessions();
+            } catch (sessionError) {
+                logger.error(`Error cleaning up inactive sessions: ${sessionError instanceof Error ? sessionError.message : String(sessionError)}`);
+            }
+            
             res.status(500).json({ error: 'Error during cleanup' });
         }
     });
