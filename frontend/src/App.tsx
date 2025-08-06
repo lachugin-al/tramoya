@@ -8,12 +8,19 @@ import React from 'react';
 import {Routes, Route, Link} from 'react-router-dom';
 import {ToastContainer} from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { AuthProvider } from './contexts/AuthContext';
+import { WorkspaceProvider } from './contexts/WorkspaceContext';
+import ProtectedRoute from './components/ProtectedRoute';
+import Header from './components/Header';
 
 /**
  * Lazy-loaded component imports to improve initial load performance
  */
 const TestList = React.lazy(() => import('./components/TestList'));
 const TestBuilder = React.lazy(() => import('./components/TestBuilder'));
+const Login = React.lazy(() => import('./pages/Login'));
+const Register = React.lazy(() => import('./pages/Register'));
+const WorkspaceSettings = React.lazy(() => import('./pages/WorkspaceSettings'));
 
 /**
  * Main application component that renders the application layout and routes.
@@ -23,50 +30,56 @@ const TestBuilder = React.lazy(() => import('./components/TestBuilder'));
  */
 const App: React.FC = () => {
     return (
-        <div className="app">
-            <header className="bg-primary">
-                <div className="container">
-                    <div className="flex justify-between items-center py-4">
-                        <h1 className="text-white font-bold text-xl">Tramoya</h1>
-                        <nav>
-                            <ul className="flex gap-4">
-                                <li>
-                                    <Link to="/" className="text-white hover:text-gray-200">
-                                        Tests
-                                    </Link>
-                                </li>
-                                <li>
-                                    <Link to="/create" className="text-white hover:text-gray-200">
-                                        Create Test
-                                    </Link>
-                                </li>
-                            </ul>
-                        </nav>
-                    </div>
+        <AuthProvider>
+            <WorkspaceProvider>
+                <div className="app">
+                    <Header />
+
+                    <main className="container">
+                        <React.Suspense fallback={<div>Loading...</div>}>
+                            <Routes>
+                                {/* Public routes */}
+                                <Route path="/login" element={<Login />} />
+                                <Route path="/register" element={<Register />} />
+                                
+                                {/* Protected routes */}
+                                <Route path="/" element={
+                                    <ProtectedRoute>
+                                        <TestList />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/create" element={
+                                    <ProtectedRoute>
+                                        <TestBuilder />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/edit/:id" element={
+                                    <ProtectedRoute>
+                                        <TestBuilder />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="/workspaces/:id/settings" element={
+                                    <ProtectedRoute>
+                                        <WorkspaceSettings />
+                                    </ProtectedRoute>
+                                } />
+                                <Route path="*" element={<NotFound />} />
+                            </Routes>
+                        </React.Suspense>
+                    </main>
+
+                    <footer className="bg-gray-100 py-4 mt-8">
+                        <div className="container">
+                            <div className="text-center text-gray-500 text-sm">
+                                &copy; {new Date().getFullYear()} Tramoya - Visual Test Builder
+                            </div>
+                        </div>
+                    </footer>
+
+                    <ToastContainer position="bottom-right" />
                 </div>
-            </header>
-
-            <main className="container">
-                <React.Suspense fallback={<div>Loading...</div>}>
-                    <Routes>
-                        <Route path="/" element={<TestList/>}/>
-                        <Route path="/create" element={<TestBuilder/>}/>
-                        <Route path="/edit/:id" element={<TestBuilder/>}/>
-                        <Route path="*" element={<NotFound/>}/>
-                    </Routes>
-                </React.Suspense>
-            </main>
-
-            <footer className="bg-gray-100 py-4 mt-8">
-                <div className="container">
-                    <div className="text-center text-gray-500 text-sm">
-                        &copy; {new Date().getFullYear()} Tramoya - Visual Test Builder
-                    </div>
-                </div>
-            </footer>
-
-            <ToastContainer position="bottom-right"/>
-        </div>
+            </WorkspaceProvider>
+        </AuthProvider>
     );
 };
 

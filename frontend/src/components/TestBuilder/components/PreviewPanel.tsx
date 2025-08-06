@@ -29,6 +29,7 @@ interface PreviewPanelProps {
     testResult?: TestResult | null;
     currentStepIndex?: number;
     onStepChange?: (index: number) => void;
+    hoveredStepIndex?: number | null;
 }
 
 /**
@@ -96,7 +97,8 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
                                                        currentUrl,
                                                        testResult,
                                                        currentStepIndex = 0,
-                                                       onStepChange
+                                                       onStepChange,
+                                                       hoveredStepIndex
                                                    }) => {
     PreviewPanel.displayName = 'PreviewPanel';
     // const normalizedStatus = testStatus?.toLowerCase() as TestStatus;
@@ -175,7 +177,10 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
      * or if the current step index is out of bounds.
      */
     const currentStepScreenshots: Screenshot[] = React.useMemo(() => {
-        debugLog('PreviewPanel', `Calculating screenshots for step ${currentStepIndex}`);
+        // Use hoveredStepIndex if available, otherwise use currentStepIndex
+        const stepIndexToUse = hoveredStepIndex !== null && hoveredStepIndex !== undefined ? hoveredStepIndex : currentStepIndex;
+        
+        debugLog('PreviewPanel', `Calculating screenshots for step ${stepIndexToUse} (${hoveredStepIndex !== null ? 'hovered' : 'current'})`);
 
         if (!testResult) {
             debugLog('PreviewPanel', 'No test result available');
@@ -193,14 +198,14 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
             return [];
         }
 
-        // If currentStepIndex is out of bounds, return empty array
-        if (currentStepIndex >= testResult.stepResults.length) {
-            debugLog('PreviewPanel', `Current step index out of bounds: ${currentStepIndex} >= ${testResult.stepResults.length}`);
+        // If stepIndexToUse is out of bounds, return empty array
+        if (stepIndexToUse >= testResult.stepResults.length) {
+            debugLog('PreviewPanel', `Step index out of bounds: ${stepIndexToUse} >= ${testResult.stepResults.length}`);
             return [];
         }
 
-        const stepResult = testResult.stepResults[currentStepIndex];
-        debugLog('PreviewPanel', `Step result for index ${currentStepIndex}`, {
+        const stepResult = testResult.stepResults[stepIndexToUse];
+        debugLog('PreviewPanel', `Step result for index ${stepIndexToUse}`, {
             stepId: stepResult.stepId,
             status: stepResult.status,
             screenshotsCount: stepResult.screenshots?.length || 0
@@ -209,29 +214,30 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
         const screenshots = stepResult.screenshots || [];
 
         if (screenshots.length > 0) {
-            debugLog('PreviewPanel', `Found ${screenshots.length} screenshots for step ${currentStepIndex}`);
+            debugLog('PreviewPanel', `Found ${screenshots.length} screenshots for step ${stepIndexToUse}`);
             debugLog('PreviewPanel', 'Screenshot details', screenshots.map(s => ({
                 id: s.id,
                 url: s.url,
                 path: s.path
             })));
         } else {
-            debugLog('PreviewPanel', `No screenshots found for step ${currentStepIndex}`);
+            debugLog('PreviewPanel', `No screenshots found for step ${stepIndexToUse}`);
         }
 
         return screenshots;
-    }, [testResult, currentStepIndex]);
+    }, [testResult, currentStepIndex, hoveredStepIndex]);
 
     /**
      * Effect to reset screenshot index when step changes
      *
      * @effect
-     * @description Resets the screenshot index to 0 whenever the current step changes
+     * @description Resets the screenshot index to 0 whenever the current step or hovered step changes
      */
     React.useEffect(() => {
-        debugLog('PreviewPanel', `Step changed to ${currentStepIndex}, resetting screenshot index to 0`);
+        const stepIndexToUse = hoveredStepIndex !== null && hoveredStepIndex !== undefined ? hoveredStepIndex : currentStepIndex;
+        debugLog('PreviewPanel', `Step changed to ${stepIndexToUse} (${hoveredStepIndex !== null ? 'hovered' : 'current'}), resetting screenshot index to 0`);
         setScreenshotIndex(0);
-    }, [currentStepIndex]);
+    }, [currentStepIndex, hoveredStepIndex]);
 
     /**
      * Effect to verify image URLs when screenshots change
@@ -265,10 +271,11 @@ const PreviewPanel: React.FC<PreviewPanelProps> = ({
             selectedBrowser,
             currentUrl,
             currentStepIndex,
+            hoveredStepIndex,
             testResultAvailable: !!testResult,
             screenshotsAvailable: currentStepScreenshots.length > 0
         });
-    }, [testStatus, selectedBrowser, currentUrl, testResult, currentStepIndex, currentStepScreenshots.length]);
+    }, [testStatus, selectedBrowser, currentUrl, testResult, currentStepIndex, hoveredStepIndex, currentStepScreenshots.length]);
 
     /**
      * Navigates to the previous screenshot

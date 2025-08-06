@@ -15,7 +15,9 @@ import {StepTemplates} from '../../../constants/stepTypeMetadata';
  * @property {function} onMoveStep - Callback function when a step is moved to a new position
  * @property {function} onAddStep - Callback function when a new step type is selected to add
  * @property {function} onUpdateStep - Callback function when a step is updated
+ * @property {function} onStepHover - Callback function when a step is hovered
  * @property {number} [editingStepIndex] - Optional index of the step currently being edited
+ * @property {Record<string, string>} [stepStatuses] - Map of step IDs to their statuses
  */
 interface StepsPanelProps {
     steps: TestStep[];
@@ -24,6 +26,7 @@ interface StepsPanelProps {
     onMoveStep: (fromIndex: number, toIndex: number) => void;
     onAddStep: (stepType: TestStepType) => void;
     onUpdateStep: (index: number, step: TestStep) => void;
+    onStepHover: (index: number) => void;
     editingStepIndex?: number;
     stepStatuses?: Record<string, string>; // Map of step IDs to their statuses
 }
@@ -64,6 +67,7 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
                                                    onMoveStep,
                                                    onAddStep,
                                                    onUpdateStep,
+                                                   onStepHover,
                                                    editingStepIndex,
                                                    stepStatuses = {}
                                                }) => {
@@ -172,6 +176,7 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
                                     onMoveStep={onMoveStep}
                                     onMoveUp={index > 0 ? () => onMoveStep(index, index - 1) : undefined}
                                     onMoveDown={index < steps.length - 1 ? () => onMoveStep(index, index + 1) : undefined}
+                                    onMouseEnter={() => onStepHover(index)}
                                     status={stepStatuses[step.id]}
                                 />
                             ))}

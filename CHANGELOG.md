@@ -6,6 +6,24 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [MVP 3.0.0] - 2025-08-07
+### Added
+- Authentication system for secure user access
+- Workspace management functionality for organizing tests
+- Enhanced test execution with real-time step status tracking
+- In-app Playwright Trace Viewer integration for advanced debugging
+- Hovered step tracking functionality in TestBuilder
+- Card process animation during test execution
+- Unit and integration tests for trace-viewer service and routes
+
+### Changed
+- Modified API endpoint for test execution to use query parameters for workspace ID
+- Refactored test execution logic for improved step status handling
+- Enhanced test execution state management
+- Refactored step type metadata into reusable constants
+
+## [Unreleased - Previous]
 ### Changed
 - Refactor imports to align with project style
 - Apply consistent spacing across files for improved readability

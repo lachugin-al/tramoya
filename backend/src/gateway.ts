@@ -60,9 +60,9 @@ async function startGateway() {
     try {
         // Initialize services
         logger.debug('Initializing services');
-        const {minioService, redisService, queueService} = await initializeServices();
+        const {minioService, redisService, queueService, prisma} = await initializeServices();
         logger.debug('Services initialized successfully', {
-            serviceTypes: ['minio', 'redis', 'queue'],
+            serviceTypes: ['minio', 'redis', 'queue', 'prisma'],
             initTime: `${Date.now() - startTime}ms`
         });
 
@@ -120,7 +120,7 @@ async function startGateway() {
 
         // Set up routes with services
         logger.debug('Setting up routes');
-        const routes = setupRoutes(app, minioService, redisService, queueService);
+        const routes = setupRoutes(app, minioService, redisService, queueService, prisma);
         logger.debug('Routes configured successfully');
 
         // Start server

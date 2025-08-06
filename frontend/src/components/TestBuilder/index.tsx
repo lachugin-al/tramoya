@@ -1,10 +1,11 @@
 import React, {useState, useEffect} from 'react';
-import {useParams, useNavigate} from 'react-router-dom';
+import {useParams, useNavigate, useLocation} from 'react-router-dom';
 import {toast} from 'react-toastify';
 import {v4 as uuidv4} from 'uuid';
 import apiService from '../../services/api';
 import useRunStream from '../../hooks/useRunStream';
 import {createLogger} from '../../utils/logger';
+import {useWorkspace} from '../../contexts/WorkspaceContext';
 import {
     TestScenario,
     TestStep,
@@ -57,6 +58,23 @@ const TestBuilder: React.FC = () => {
     const navigate = useNavigate();
 
     /**
+     * Location object from React Router for accessing query parameters
+     */
+    const location = useLocation();
+
+    /**
+     * Access the current workspace from context
+     */
+    const { currentWorkspace } = useWorkspace();
+
+    /**
+     * Extract workspace ID from URL query parameters or use current workspace
+     */
+    const queryParams = new URLSearchParams(location.search);
+    const workspaceIdFromUrl = queryParams.get('workspaceId');
+    const workspaceId = workspaceIdFromUrl || currentWorkspace?.id;
+
+    /**
      * Flag indicating whether we're editing an existing test or creating a new one
      */
     const isEditMode = !!id;
@@ -64,7 +82,8 @@ const TestBuilder: React.FC = () => {
     // Log component initialization
     logger.info('TestBuilder component initialized', {
         isEditMode,
-        testId: id
+        testId: id,
+        workspaceId
     });
 
     /**
@@ -123,6 +142,11 @@ const TestBuilder: React.FC = () => {
      * State tracking the index of the current step being executed
      */
     const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
+
+    /**
+     * State tracking the index of the step being hovered
+     */
+    const [hoveredStepIndex, setHoveredStepIndex] = useState<number | null>(null);
 
     /**
      * State tracking the status of each step by ID
@@ -230,23 +254,32 @@ const TestBuilder: React.FC = () => {
      * @returns {Promise<void>}
      */
     const fetchTest = async (testId: string): Promise<void> => {
-        logger.info(`Fetching test: ${testId}`);
+        if (!workspaceId) {
+            logger.error('Cannot fetch test: No workspace ID available');
+            setError('No workspace selected. Please select a workspace to view this test.');
+            toast.error('No workspace selected');
+            setLoading(false);
+            return;
+        }
+
+        logger.info(`Fetching test: ${testId}`, { workspaceId });
         const startTime = Date.now();
 
         try {
             setLoading(true);
-            const data = await apiService.getTest(testId);
+            const data = await apiService.getTest(testId, workspaceId);
 
             logger.info(`Test fetched successfully: ${testId}`, {
                 name: data.name,
                 stepsCount: data.steps.length,
+                workspaceId,
                 fetchTime: `${Date.now() - startTime}ms`
             });
 
             setTest(data);
             setError(null);
         } catch (err) {
-            logger.error(`Failed to load test: ${testId}`, {error: err});
+            logger.error(`Failed to load test: ${testId}`, { error: err, workspaceId });
             setError('Failed to load test. Please try again.');
             toast.error('Failed to load test');
         } finally {
@@ -271,11 +304,18 @@ const TestBuilder: React.FC = () => {
             return;
         }
 
+        if (!workspaceId) {
+            logger.error('Cannot save test: No workspace ID available');
+            toast.error('No workspace selected. Please select a workspace to save this test.');
+            return;
+        }
+
         logger.info('Saving test', {
             id: test.id,
             name: test.name,
             stepsCount: test.steps.length,
-            isEditMode
+            isEditMode,
+            workspaceId
         });
 
         const startTime = Date.now();
@@ -285,30 +325,33 @@ const TestBuilder: React.FC = () => {
 
             if (isEditMode && id) {
                 // Update existing test
-                logger.debug(`Updating existing test: ${id}`);
-                await apiService.updateTest(id, test);
+                logger.debug(`Updating existing test: ${id}`, { workspaceId });
+                await apiService.updateTest(id, test, workspaceId);
                 logger.info(`Test updated successfully: ${id}`, {
-                    saveTime: `${Date.now() - startTime}ms`
+                    saveTime: `${Date.now() - startTime}ms`,
+                    workspaceId
                 });
                 toast.success('Test updated successfully');
                 // Stay on the edit page - no navigation
             } else {
                 // Create new test
-                logger.debug('Creating new test');
+                logger.debug('Creating new test', { workspaceId });
                 const {id, createdAt, updatedAt, ...newTest} = test;
-                const createdTest = await apiService.createTest(newTest);
+                const createdTest = await apiService.createTest(newTest, workspaceId);
                 logger.info(`Test created successfully: ${createdTest.id}`, {
-                    saveTime: `${Date.now() - startTime}ms`
+                    saveTime: `${Date.now() - startTime}ms`,
+                    workspaceId
                 });
                 toast.success('Test created successfully');
 
                 // Navigate to edit page for the newly created test
-                navigate(`/edit/${createdTest.id}`);
+                navigate(`/edit/${createdTest.id}?workspaceId=${workspaceId}`);
             }
         } catch (err) {
             logger.error('Failed to save test', {
                 error: err,
                 testId: test.id,
+                workspaceId,
                 saveTime: `${Date.now() - startTime}ms`
             });
             toast.error('Failed to save test');
@@ -384,9 +427,16 @@ const TestBuilder: React.FC = () => {
             return;
         }
 
+        if (!workspaceId) {
+            logger.error('Cannot run test: No workspace ID available');
+            toast.error('No workspace selected. Please select a workspace to run this test.');
+            return;
+        }
+
         logger.info(`Running test: ${test.id}`, {
             name: test.name,
-            stepsCount: test.steps.length
+            stepsCount: test.steps.length,
+            workspaceId
         });
 
         const startTime = Date.now();
@@ -399,10 +449,11 @@ const TestBuilder: React.FC = () => {
             setCurrentStepIndex(0);
 
             // Execute test
-            logger.debug(`Executing test: ${test.id}`);
-            const {resultId} = await apiService.executeTest(test.id);
+            logger.debug(`Executing test: ${test.id}`, { workspaceId });
+            const {resultId} = await apiService.executeTest(test.id, workspaceId);
             logger.info(`Test execution started: ${test.id}`, {
                 resultId,
+                workspaceId,
                 executionTime: `${Date.now() - startTime}ms`
             });
 
@@ -418,6 +469,7 @@ const TestBuilder: React.FC = () => {
         } catch (err) {
             logger.error(`Failed to execute test: ${test.id}`, {
                 error: err,
+                workspaceId,
                 executionTime: `${Date.now() - startTime}ms`
             });
             toast.error('Failed to execute test');
@@ -722,6 +774,19 @@ const TestBuilder: React.FC = () => {
         logger.debug(`Updating test name from "${test.name}" to "${name}"`);
         setTest({...test, name});
     };
+    
+    /**
+     * Handles step hover events
+     * 
+     * @function handleStepHover
+     * @description Updates the hoveredStepIndex state when a step is hovered
+     * @param {number} index - The index of the step being hovered
+     */
+    const handleStepHover = (index: number): void => {
+        logger.debug(`Step hovered: ${index}`);
+        setHoveredStepIndex(index);
+    };
+    
 
     /**
      * Renders loading state when test data is being fetched
@@ -800,6 +865,7 @@ const TestBuilder: React.FC = () => {
                         onMoveStep={handleMoveStep}
                         onAddStep={handleAddStep}
                         onUpdateStep={handleUpdateStep}
+                        onStepHover={handleStepHover}
                         editingStepIndex={editingIndex ?? undefined}
                         stepStatuses={stepStatuses}
                     />
@@ -816,6 +882,7 @@ const TestBuilder: React.FC = () => {
                         testResult={testResult}
                         currentStepIndex={currentStepIndex}
                         onStepChange={setCurrentStepIndex}
+                        hoveredStepIndex={hoveredStepIndex}
                     />
                 </div>
             </div>

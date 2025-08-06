@@ -3,6 +3,7 @@ import {Link} from 'react-router-dom';
 import {toast} from 'react-toastify';
 import apiService from '../services/api';
 import {TestScenario} from '../types';
+import {useWorkspace} from '../contexts/WorkspaceContext';
 
 /**
  * TestList Component
@@ -17,6 +18,11 @@ import {TestScenario} from '../types';
  * ```
  */
 const TestList: React.FC = () => {
+    /**
+     * Access the current workspace from context
+     */
+    const { currentWorkspace } = useWorkspace();
+
     /**
      * State containing the list of test scenarios
      */
@@ -33,24 +39,33 @@ const TestList: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
 
     /**
-     * Effect hook to fetch tests when component mounts
+     * Effect hook to fetch tests when component mounts or workspace changes
      */
     useEffect(() => {
-        fetchTests();
-    }, []);
+        if (currentWorkspace) {
+            fetchTests();
+        }
+    }, [currentWorkspace]);
 
     /**
-     * Fetches all test scenarios from the API
+     * Fetches test scenarios for the current workspace from the API
      *
      * @async
      * @function fetchTests
-     * @description Retrieves all test scenarios from the backend API and updates component state
+     * @description Retrieves test scenarios for the current workspace from the backend API and updates component state
      * @returns {Promise<void>}
      */
     const fetchTests = async (): Promise<void> => {
+        if (!currentWorkspace) {
+            setError('No workspace selected. Please select a workspace to view tests.');
+            setLoading(false);
+            return;
+        }
+
         try {
             setLoading(true);
-            const data = await apiService.getTests();
+            // Pass the workspace ID as a query parameter
+            const data = await apiService.getTests(currentWorkspace.id);
             setTests(data);
             setError(null);
         } catch (err) {
@@ -68,15 +83,21 @@ const TestList: React.FC = () => {
      * @function deleteTest
      * @description Prompts for confirmation and deletes the specified test if confirmed
      * @param {string} id - The unique identifier of the test to delete
+     * @param {string} workspaceId - The ID of the workspace the test belongs to
      * @returns {Promise<void>}
      */
-    const deleteTest = async (id: string): Promise<void> => {
+    const deleteTest = async (id: string, workspaceId: string): Promise<void> => {
+        if (!workspaceId) {
+            toast.error('No workspace selected');
+            return;
+        }
+
         if (!window.confirm('Are you sure you want to delete this test?')) {
             return;
         }
 
         try {
-            await apiService.deleteTest(id);
+            await apiService.deleteTest(id, workspaceId);
             setTests(tests.filter(test => test.id !== id));
             toast.success('Test deleted successfully');
         } catch (err) {
@@ -134,10 +155,22 @@ const TestList: React.FC = () => {
     return (
         <div>
             <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold">Your Tests</h2>
-                <Link to="/create" className="button">
-                    Create New Test
-                </Link>
+                <div>
+                    <h2 className="text-2xl font-bold">Tests</h2>
+                    {currentWorkspace && (
+                        <p className="text-gray-600 mt-1">
+                            Workspace: {currentWorkspace.name}
+                        </p>
+                    )}
+                </div>
+                {currentWorkspace && (
+                    <Link 
+                        to={`/create?workspaceId=${currentWorkspace.id}`} 
+                        className="button"
+                    >
+                        Create New Test
+                    </Link>
+                )}
             </div>
 
             <div className="grid gap-4">
@@ -155,12 +188,16 @@ const TestList: React.FC = () => {
                                 </div>
                             </div>
                             <div className="flex gap-2">
-                                <Link to={`/edit/${test.id}`} className="button bg-secondary">
+                                <Link 
+                                    to={`/edit/${test.id}?workspaceId=${currentWorkspace?.id}`} 
+                                    className="button bg-secondary"
+                                >
                                     Edit
                                 </Link>
                                 <button
-                                    onClick={() => deleteTest(test.id)}
+                                    onClick={() => deleteTest(test.id, currentWorkspace?.id || '')}
                                     className="button bg-error"
+                                    disabled={!currentWorkspace}
                                 >
                                     Delete
                                 </button>

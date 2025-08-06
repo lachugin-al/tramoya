@@ -3,6 +3,7 @@ import {useParams, useNavigate, Link} from 'react-router-dom';
 import {toast} from 'react-toastify';
 import apiService from '../../services/api';
 import {TestResult, TestStatus, StepStatus, StepResult, TestScenario} from '../../types';
+import {useWorkspace} from '../../contexts/WorkspaceContext';
 import TraceViewer from '../TraceViewer/TraceViewer';
 
 /**
@@ -91,6 +92,11 @@ const TestResults: React.FC = () => {
      * Navigation function from React Router
      */
     const navigate = useNavigate();
+    
+    /**
+     * Get current workspace from context
+     */
+    const { currentWorkspace } = useWorkspace();
 
     /**
      * State containing the test result data
@@ -164,9 +170,9 @@ const TestResults: React.FC = () => {
             setResult(data);
 
             // Fetch test details
-            if (data.testId) {
+            if (data.testId && currentWorkspace) {
                 try {
-                    const testData = await apiService.getTest(data.testId);
+                    const testData = await apiService.getTest(data.testId, currentWorkspace.id);
                     setTest(testData);
                 } catch (err) {
                     console.error('Error fetching test details:', err);

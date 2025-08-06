@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users table for storing user information
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  isActive     Boolean  @default(true)
+
+  // Relationships
+  workspaces       UserWorkspaceRole[]
+  createdWorkspaces Workspace[]        @relation("CreatedBy")
+  createdTests     Test[]              @relation("TestCreatedBy")
+
+  @@map("users")
+}
+
+// Workspaces table for storing workspace information
+model Workspace {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  isActive    Boolean  @default(true)
+
+  // Relationships
+  createdBy User               @relation("CreatedBy", fields: [createdById], references: [id])
+  users     UserWorkspaceRole[]
+  tests     Test[]
+
+  @@map("workspaces")
+}
+
+// Enum for user roles in workspaces
+enum Role {
+  OWNER
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// UserWorkspaceRole table for storing the relationship between users and workspaces
+model UserWorkspaceRole {
+  id          String   @id @default(uuid())
+  userId      String
+  workspaceId String
+  role        Role
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  user      User      @relation(fields: [userId], references: [id])
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+
+  @@unique([userId, workspaceId])
+  @@map("user_workspace_roles")
+}
+
+// Tests table for storing test scenarios
+model Test {
+  id          String   @id @default(uuid())
+  workspaceId String
+  name        String
+  description String?
+  config      Json
+  createdById String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relationships
+  workspace Workspace @relation(fields: [workspaceId], references: [id])
+  createdBy User      @relation("TestCreatedBy", fields: [createdById], references: [id])
+
+  @@map("tests")
+}

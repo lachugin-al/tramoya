@@ -1,0 +1,8 @@
+# This is an auto-generated file based on the Prisma schema, you should not edit it manually
+
+migration_name = "20250806000000_initial"
+schema_hash = "e5a4e7a0e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3"
+
+# The migration_dependencies array is designed to track dependent migrations
+# It is currently empty for the initial migration
+migration_dependencies = []
