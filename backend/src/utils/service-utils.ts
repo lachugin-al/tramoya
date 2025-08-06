@@ -2,6 +2,7 @@ import {createLogger} from './logger';
 import {MinioService} from '../services/minio-service';
 import {RedisService} from '../services/redis-service';
 import {QueueService} from '../services/queue-service';
+import {initPrisma, disconnectPrisma} from '../services/prisma-service';
 
 /**
  * Logger instance for service utilities
@@ -11,14 +12,15 @@ const logger = createLogger('service-utils');
 
 /**
  * Initializes and configures all common services required by the application
- * This function handles the initialization of MinIO, Redis, and Queue services,
+ * This function handles the initialization of MinIO, Redis, Queue, and Prisma services,
  * ensuring they are properly configured and ready to use. It also ensures that
  * required resources like MinIO buckets exist.
  *
  * @returns {Promise<{
  *   minioService: MinioService,
  *   redisService: RedisService,
- *   queueService: QueueService
+ *   queueService: QueueService,
+ *   prisma: PrismaClient
  * }>} Object containing initialized service instances
  *
  * @throws {Error} If any service fails to initialize properly
@@ -29,7 +31,7 @@ const logger = createLogger('service-utils');
  *
  * async function startApp() {
  *   try {
- *     const { minioService, redisService, queueService } = await initializeServices();
+ *     const { minioService, redisService, queueService, prisma } = await initializeServices();
  *     // Services are now ready to use
  *     // Continue with application startup...
  *   } catch (error) {
@@ -43,6 +45,7 @@ const logger = createLogger('service-utils');
  * - MinIO: Uses MINIO_ENDPOINT and MINIO_BUCKET environment variables
  * - Redis: Uses REDIS_HOST and REDIS_PORT environment variables
  * - Queue: Creates a queue named 'tramoya-queue'
+ * - Prisma: Uses DATABASE_URL environment variable for database connection
  *
  * The function logs detailed timing information for each initialization step
  * and provides comprehensive error handling.
@@ -84,6 +87,14 @@ export async function initializeServices() {
             initTime: `${Date.now() - bucketStartTime}ms`
         });
 
+        // Initialize Prisma client
+        logger.debug('Initializing Prisma client');
+        const prismaStartTime = Date.now();
+        const prisma = await initPrisma();
+        logger.debug('Prisma client initialized', {
+            initTime: `${Date.now() - prismaStartTime}ms`
+        });
+
         const totalTime = Date.now() - startTime;
         logger.info('Services initialized successfully', {
             totalTime: `${totalTime}ms`,
@@ -98,6 +109,9 @@ export async function initializeServices() {
                 },
                 queue: {
                     name: 'tramoya-queue'
+                },
+                prisma: {
+                    url: process.env.DATABASE_URL ? 'configured' : 'not configured'
                 }
             }
         });
@@ -105,7 +119,8 @@ export async function initializeServices() {
         return {
             minioService,
             redisService,
-            queueService
+            queueService,
+            prisma
         };
     } catch (error) {
         logger.error('Error initializing services', {
@@ -150,6 +165,7 @@ export async function initializeServices() {
  * The function performs the following shutdown sequence:
  * 1. Closes the Queue service connections first
  * 2. Closes the Redis service connections next
+ * 3. Disconnects the Prisma client
  *
  * The function logs detailed timing information for each shutdown step
  * and provides comprehensive error handling.
@@ -176,6 +192,14 @@ export async function shutdownServices(
         await redisService.close();
         logger.debug('Redis connections closed', {
             closeTime: `${Date.now() - redisCloseTime}ms`
+        });
+
+        // Disconnect Prisma client
+        logger.debug('Disconnecting Prisma client');
+        const prismaCloseTime = Date.now();
+        await disconnectPrisma();
+        logger.debug('Prisma client disconnected', {
+            closeTime: `${Date.now() - prismaCloseTime}ms`
         });
 
         const totalTime = Date.now() - startTime;

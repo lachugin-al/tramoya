@@ -1,6 +1,6 @@
 FROM node:18-slim
 
-# Install dependencies required for Playwright
+# Install dependencies required for Playwright and build tools for native modules
 RUN apt-get update && apt-get install -y \
     libglib2.0-0 \
     libnss3 \
@@ -23,6 +23,10 @@ RUN apt-get update && apt-get install -y \
     libcairo2 \
     libasound2 \
     libatspi2.0-0 \
+    # Build tools for native modules
+    python3 \
+    make \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app

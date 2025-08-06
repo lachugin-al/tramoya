@@ -1,4 +1,4 @@
-import axios, {AxiosError} from 'axios';
+import axios, {AxiosError, InternalAxiosRequestConfig} from 'axios';
 import {TestScenario, TestResult} from '../types';
 import {createLogger} from '../utils/logger';
 
@@ -15,6 +15,7 @@ const logger = createLogger('api-service');
  * - Base URL pointing to the API endpoint
  * - Default headers for JSON content
  * - Request and response interceptors for logging and error handling
+ * - Authentication token interceptor
  */
 const api = axios.create({
     baseURL: '/api/v1',
@@ -22,6 +23,34 @@ const api = axios.create({
         'Content-Type': 'application/json',
     },
 });
+
+/**
+ * Authentication token interceptor
+ * 
+ * This interceptor adds the authentication token to the request headers if available.
+ * It gets the token from local storage and adds it to the Authorization header.
+ * 
+ * @param {Object} config - The Axios request configuration
+ * @returns {Object} The modified request configuration with auth token
+ */
+api.interceptors.request.use(
+    (config: InternalAxiosRequestConfig) => {
+        // Get token from local storage
+        const token = localStorage.getItem('tramoya_auth_token');
+        
+        // Add token to headers if available
+        if (token) {
+            config.headers = config.headers || {};
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        
+        return config;
+    },
+    (error) => {
+        logger.error('Auth token interceptor error', {error: error.message, stack: error.stack});
+        return Promise.reject(error);
+    }
+);
 
 /**
  * Request interceptor for logging and request enhancement
@@ -133,28 +162,31 @@ api.interceptors.response.use(
  */
 export const apiService = {
     /**
-     * Retrieves all test scenarios from the backend
+     * Retrieves test scenarios from the backend, optionally filtered by workspace
      *
-     * This method fetches the complete list of test scenarios available in the system.
+     * This method fetches test scenarios available in the system, filtered by workspace if specified.
      * Each test scenario contains information about the test steps, name, description, etc.
      *
+     * @param {string} [workspaceId] - Optional workspace ID to filter tests by
      * @returns {Promise<TestScenario[]>} A promise that resolves to an array of test scenarios
      *
      * @throws Will throw an error if the API request fails
      *
      * @example
-     * // Get all test scenarios
-     * const scenarios = await apiService.getTests();
-     * console.log(`Found ${scenarios.length} test scenarios`);
+     * // Get all test scenarios in a workspace
+     * const scenarios = await apiService.getTests('workspace-123');
+     * console.log(`Found ${scenarios.length} test scenarios in workspace`);
      */
-    async getTests(): Promise<TestScenario[]> {
-        logger.info('Getting all test scenarios');
+    async getTests(workspaceId?: string): Promise<TestScenario[]> {
+        logger.info('Getting test scenarios', workspaceId ? { workspaceId } : {});
         try {
-            const response = await api.get('/tests');
+            const response = await api.get('/tests', {
+                params: workspaceId ? { workspaceId } : {}
+            });
             logger.info(`Retrieved ${response.data.length} test scenarios`);
             return response.data;
         } catch (error) {
-            logger.error('Failed to get test scenarios', {error});
+            logger.error('Failed to get test scenarios', {error, workspaceId});
             throw error;
         }
     },
@@ -165,26 +197,30 @@ export const apiService = {
      * This method fetches a single test scenario with the specified ID.
      *
      * @param {string} id - The unique identifier of the test scenario to retrieve
+     * @param {string} workspaceId - The ID of the workspace the test belongs to
      * @returns {Promise<TestScenario>} A promise that resolves to the requested test scenario
      *
      * @throws Will throw an error if the test scenario doesn't exist or if the API request fails
      *
      * @example
      * // Get a specific test scenario
-     * const scenario = await apiService.getTest('test-123');
+     * const scenario = await apiService.getTest('test-123', 'workspace-123');
      * console.log(`Retrieved test: ${scenario.name}`);
      */
-    async getTest(id: string): Promise<TestScenario> {
-        logger.info(`Getting test scenario: ${id}`);
+    async getTest(id: string, workspaceId: string): Promise<TestScenario> {
+        logger.info(`Getting test scenario: ${id}`, { workspaceId });
         try {
-            const response = await api.get(`/tests/${id}`);
+            const response = await api.get(`/tests/${id}`, {
+                params: { workspaceId }
+            });
             logger.info(`Retrieved test scenario: ${id}`, {
                 name: response.data.name,
-                stepsCount: response.data.steps.length
+                stepsCount: response.data.steps.length,
+                workspaceId
             });
             return response.data;
         } catch (error) {
-            logger.error(`Failed to get test scenario: ${id}`, {error});
+            logger.error(`Failed to get test scenario: ${id}`, { error, workspaceId });
             throw error;
         }
     },
@@ -197,34 +233,44 @@ export const apiService = {
      *
      * @param {Omit<TestScenario, 'id' | 'createdAt' | 'updatedAt'>} test - The test scenario to create,
      *        excluding fields that will be assigned by the server (id, createdAt, updatedAt)
+     * @param {string} workspaceId - The ID of the workspace to associate the test with
      * @returns {Promise<TestScenario>} A promise that resolves to the created test scenario with server-assigned fields
      *
      * @throws Will throw an error if the test scenario is invalid or if the API request fails
      *
      * @example
-     * // Create a new test scenario
+     * // Create a new test scenario in a workspace
      * const newScenario = await apiService.createTest({
      *   name: 'Login Test',
      *   description: 'Tests the login functionality',
      *   steps: [
      *     { id: 'step1', type: TestStepType.NAVIGATE, url: 'https://example.com/login' }
      *   ]
-     * });
+     * }, 'workspace-123');
      * console.log(`Created test with ID: ${newScenario.id}`);
      */
-    async createTest(test: Omit<TestScenario, 'id' | 'createdAt' | 'updatedAt'>): Promise<TestScenario> {
+    async createTest(
+        test: Omit<TestScenario, 'id' | 'createdAt' | 'updatedAt'>, 
+        workspaceId: string
+    ): Promise<TestScenario> {
         logger.info('Creating new test scenario', {
             name: test.name,
-            stepsCount: test.steps.length
+            stepsCount: test.steps.length,
+            workspaceId
         });
         try {
-            const response = await api.post('/tests', test);
+            const response = await api.post('/tests', { ...test, workspaceId });
             logger.info(`Created new test scenario: ${response.data.id}`, {
-                name: response.data.name
+                name: response.data.name,
+                workspaceId
             });
             return response.data;
         } catch (error) {
-            logger.error('Failed to create test scenario', {error, test: test.name});
+            logger.error('Failed to create test scenario', {
+                error, 
+                test: test.name,
+                workspaceId
+            });
             throw error;
         }
     },
@@ -237,13 +283,14 @@ export const apiService = {
      *
      * @param {string} id - The unique identifier of the test scenario to update
      * @param {Partial<TestScenario>} test - The partial test scenario data to update
+     * @param {string} workspaceId - The ID of the workspace the test belongs to
      * @returns {Promise<TestScenario>} A promise that resolves to the updated test scenario
      *
      * @throws Will throw an error if the test scenario doesn't exist, the update is invalid, or if the API request fails
      *
      * @example
      * // Update a test scenario's name
-     * const updatedScenario = await apiService.updateTest('test-123', { name: 'Updated Login Test' });
+     * const updatedScenario = await apiService.updateTest('test-123', { name: 'Updated Login Test' }, 'workspace-123');
      *
      * // Update a test scenario's steps
      * const updatedScenario = await apiService.updateTest('test-123', {
@@ -251,22 +298,24 @@ export const apiService = {
      *     { id: 'step1', type: TestStepType.NAVIGATE, url: 'https://example.com/login' },
      *     { id: 'step2', type: TestStepType.INPUT, selector: '#username', text: 'testuser' }
      *   ]
-     * });
+     * }, 'workspace-123');
      */
-    async updateTest(id: string, test: Partial<TestScenario>): Promise<TestScenario> {
+    async updateTest(id: string, test: Partial<TestScenario>, workspaceId: string): Promise<TestScenario> {
         logger.info(`Updating test scenario: ${id}`, {
             name: test.name,
-            stepsCount: test.steps?.length
+            stepsCount: test.steps?.length,
+            workspaceId
         });
         try {
-            const response = await api.put(`/tests/${id}`, test);
+            const response = await api.put(`/tests/${id}`, { ...test, workspaceId });
             logger.info(`Updated test scenario: ${id}`, {
                 name: response.data.name,
-                stepsCount: response.data.steps.length
+                stepsCount: response.data.steps.length,
+                workspaceId
             });
             return response.data;
         } catch (error) {
-            logger.error(`Failed to update test scenario: ${id}`, {error});
+            logger.error(`Failed to update test scenario: ${id}`, { error, workspaceId });
             throw error;
         }
     },
@@ -277,22 +326,25 @@ export const apiService = {
      * This method permanently deletes the test scenario with the specified ID.
      *
      * @param {string} id - The unique identifier of the test scenario to delete
+     * @param {string} workspaceId - The ID of the workspace the test belongs to
      * @returns {Promise<void>} A promise that resolves when the deletion is complete
      *
      * @throws Will throw an error if the test scenario doesn't exist or if the API request fails
      *
      * @example
      * // Delete a test scenario
-     * await apiService.deleteTest('test-123');
+     * await apiService.deleteTest('test-123', 'workspace-123');
      * console.log('Test scenario deleted successfully');
      */
-    async deleteTest(id: string): Promise<void> {
-        logger.info(`Deleting test scenario: ${id}`);
+    async deleteTest(id: string, workspaceId: string): Promise<void> {
+        logger.info(`Deleting test scenario: ${id}`, { workspaceId });
         try {
-            await api.delete(`/tests/${id}`);
-            logger.info(`Deleted test scenario: ${id}`);
+            await api.delete(`/tests/${id}`, {
+                params: { workspaceId }
+            });
+            logger.info(`Deleted test scenario: ${id}`, { workspaceId });
         } catch (error) {
-            logger.error(`Failed to delete test scenario: ${id}`, {error});
+            logger.error(`Failed to delete test scenario: ${id}`, { error, workspaceId });
             throw error;
         }
     },
@@ -304,6 +356,7 @@ export const apiService = {
      * The backend will start running the test and return initial result information.
      *
      * @param {string} id - The unique identifier of the test scenario to execute
+     * @param {string} workspaceId - The ID of the workspace the test belongs to
      * @returns {Promise<{ resultId: string; result: TestResult }>} A promise that resolves to an object containing:
      *          - resultId: The ID of the test execution result
      *          - result: The initial test result object
@@ -312,21 +365,22 @@ export const apiService = {
      *
      * @example
      * // Execute a test scenario
-     * const { resultId, result } = await apiService.executeTest('test-123');
+     * const { resultId, result } = await apiService.executeTest('test-123', 'workspace-123');
      * console.log(`Test execution started with result ID: ${resultId}`);
      * console.log(`Initial status: ${result.status}`);
      */
-    async executeTest(id: string): Promise<{ resultId: string; result: TestResult }> {
-        logger.info(`Executing test scenario: ${id}`);
+    async executeTest(id: string, workspaceId: string): Promise<{ resultId: string; result: TestResult }> {
+        logger.info(`Executing test scenario: ${id}`, { workspaceId });
         try {
-            const response = await api.post(`/tests/${id}/execute`);
+            const response = await api.post(`/tests/${id}/execute`, { workspaceId });
             logger.info(`Test execution started: ${id}`, {
                 resultId: response.data.resultId,
-                status: response.data.result.status
+                status: response.data.result.status,
+                workspaceId
             });
             return response.data;
         } catch (error) {
-            logger.error(`Failed to execute test scenario: ${id}`, {error});
+            logger.error(`Failed to execute test scenario: ${id}`, { error, workspaceId });
             throw error;
         }
     },

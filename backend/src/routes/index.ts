@@ -3,10 +3,13 @@ import {createLogger} from '../utils/logger';
 import {MinioService} from '../services/minio-service';
 import {RedisService} from '../services/redis-service';
 import {QueueService} from '../services/queue-service';
+import {PrismaClient} from '@prisma/client';
 import testRoutes from './test-routes';
 import runRoutes from './run-routes';
 import streamRoutes from './stream-routes';
 import traceViewerRoutes from './trace-viewer-routes';
+import authRoutes from './auth-routes';
+import workspaceRoutes from './workspace-routes';
 
 const logger = createLogger('routes');
 
@@ -22,6 +25,7 @@ const logger = createLogger('routes');
  * @param {MinioService} minioService - Service for object storage operations
  * @param {RedisService} redisService - Service for Redis operations and pub/sub
  * @param {QueueService} queueService - Service for job queue management
+ * @param {PrismaClient} prisma - Prisma client for database operations
  * @returns {Object} Object containing references to all route handlers for external access
  * @returns {Router} returns.testRoutes - Router for test scenario management endpoints
  * @returns {Router} returns.runRoutes - Router for test run management endpoints
@@ -31,7 +35,8 @@ export const setupRoutes = (
     app: Express,
     minioService: MinioService,
     redisService: RedisService,
-    queueService: QueueService
+    queueService: QueueService,
+    prisma: PrismaClient
 ) => {
     // API version prefix
     const apiPrefix = '/api/v1';
@@ -83,16 +88,20 @@ export const setupRoutes = (
     });
 
     // Create route handlers with services
-    const testRoutesHandler = testRoutes(minioService, redisService, queueService);
+    const testRoutesHandler = testRoutes(minioService, redisService, queueService, prisma);
     const runRoutesHandler = runRoutes(minioService, redisService, queueService);
     const streamRoutesHandler = streamRoutes(redisService);
     const traceViewerRoutesHandler = traceViewerRoutes(minioService);
+    const authRoutesHandler = authRoutes(prisma);
+    const workspaceRoutesHandler = workspaceRoutes(prisma);
 
     // Register all route groups
     app.use(`${apiPrefix}/tests`, testRoutesHandler);
     app.use(`${apiPrefix}/runs`, runRoutesHandler);
     app.use(`${apiPrefix}/stream`, streamRoutesHandler);
     app.use(`${apiPrefix}/trace-viewer`, traceViewerRoutesHandler);
+    app.use(`${apiPrefix}/auth`, authRoutesHandler);
+    app.use(`${apiPrefix}/workspaces`, workspaceRoutesHandler);
 
     logger.info('Routes initialized');
 
@@ -113,6 +122,8 @@ export const setupRoutes = (
         testRoutes: testRoutesHandler,
         runRoutes: runRoutesHandler,
         streamRoutes: streamRoutesHandler,
-        traceViewerRoutes: traceViewerRoutesHandler
+        traceViewerRoutes: traceViewerRoutesHandler,
+        authRoutes: authRoutesHandler,
+        workspaceRoutes: workspaceRoutesHandler
     };
 };
