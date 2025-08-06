@@ -125,6 +125,11 @@ const TestBuilder: React.FC = () => {
     const [currentStepIndex, setCurrentStepIndex] = useState<number>(0);
 
     /**
+     * State tracking the index of the step being hovered
+     */
+    const [hoveredStepIndex, setHoveredStepIndex] = useState<number | null>(null);
+
+    /**
      * State tracking the status of each step by ID
      */
     const [stepStatuses, setStepStatuses] = useState<Record<string, string>>({});
@@ -722,6 +727,19 @@ const TestBuilder: React.FC = () => {
         logger.debug(`Updating test name from "${test.name}" to "${name}"`);
         setTest({...test, name});
     };
+    
+    /**
+     * Handles step hover events
+     * 
+     * @function handleStepHover
+     * @description Updates the hoveredStepIndex state when a step is hovered
+     * @param {number} index - The index of the step being hovered
+     */
+    const handleStepHover = (index: number): void => {
+        logger.debug(`Step hovered: ${index}`);
+        setHoveredStepIndex(index);
+    };
+    
 
     /**
      * Renders loading state when test data is being fetched
@@ -800,6 +818,7 @@ const TestBuilder: React.FC = () => {
                         onMoveStep={handleMoveStep}
                         onAddStep={handleAddStep}
                         onUpdateStep={handleUpdateStep}
+                        onStepHover={handleStepHover}
                         editingStepIndex={editingIndex ?? undefined}
                         stepStatuses={stepStatuses}
                     />
@@ -816,6 +835,7 @@ const TestBuilder: React.FC = () => {
                         testResult={testResult}
                         currentStepIndex={currentStepIndex}
                         onStepChange={setCurrentStepIndex}
+                        hoveredStepIndex={hoveredStepIndex}
                     />
                 </div>
             </div>

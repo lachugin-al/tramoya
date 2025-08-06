@@ -17,6 +17,8 @@ import {StepIcons, StepLabels} from '../../../constants/stepTypeMetadata';
  * @property {function} [onMoveStep] - Callback function when the step is moved via drag and drop
  * @property {function} [onMoveUp] - Callback function when the step is moved up
  * @property {function} [onMoveDown] - Callback function when the step is moved down
+ * @property {function} [onMouseEnter] - Callback function when the mouse enters the step card
+ * @property {string} [status] - Step status (RUNNING, PASSED, FAILED, etc.)
  */
 interface StepCardProps {
     step: TestStep;
@@ -29,6 +31,7 @@ interface StepCardProps {
     onMoveStep?: (fromIndex: number, toIndex: number) => void;
     onMoveUp?: () => void;
     onMoveDown?: () => void;
+    onMouseEnter?: () => void;
     status?: string; // Step status (RUNNING, PASSED, FAILED, etc.)
 }
 
@@ -92,6 +95,7 @@ const StepCard: React.FC<StepCardProps> = ({
                                                onMoveStep,
                                                onMoveUp,
                                                onMoveDown,
+                                               onMouseEnter,
                                                status
                                            }) => {
     // Create class name for step number with status
@@ -547,6 +551,7 @@ const StepCard: React.FC<StepCardProps> = ({
             ref={ref}
             data-handler-id={handlerId}
             className={`step-card ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
+            onMouseEnter={onMouseEnter}
         >
             <div className={stepNumberClass}>{index + 1}</div>
 
