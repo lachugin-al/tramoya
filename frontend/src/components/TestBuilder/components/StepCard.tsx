@@ -1,42 +1,7 @@
 import React, {useRef, useState, useEffect} from 'react';
 import {useDrag, useDrop, DropTargetMonitor} from 'react-dnd';
 import {TestStep, TestStepType} from '../../../types';
-
-/**
- * Icons for each test step type
- *
- * @constant
- * @type {Record<TestStepType, string>}
- * @description Emoji icons representing each type of test step
- */
-const StepIcons: Record<TestStepType, string> = {
-    [TestStepType.NAVIGATE]: '🌐',
-    [TestStepType.INPUT]: '⌨️',
-    [TestStepType.CLICK]: '🖱️',
-    [TestStepType.ASSERT_TEXT]: '📝',
-    [TestStepType.ASSERT_VISIBLE]: '👁️',
-    [TestStepType.WAIT]: '⏱️',
-    [TestStepType.ASSERT_URL]: '🔗',
-    [TestStepType.SCREENSHOT]: '📷',
-};
-
-/**
- * Display labels for each test step type
- *
- * @constant
- * @type {Record<TestStepType, string>}
- * @description Human-readable labels for each type of test step
- */
-const StepLabels: Record<TestStepType, string> = {
-    [TestStepType.NAVIGATE]: 'Navigate',
-    [TestStepType.INPUT]: 'Type text',
-    [TestStepType.CLICK]: 'Click',
-    [TestStepType.ASSERT_TEXT]: 'Assert text',
-    [TestStepType.ASSERT_VISIBLE]: 'Assert visible',
-    [TestStepType.WAIT]: 'Wait',
-    [TestStepType.ASSERT_URL]: 'Assert URL',
-    [TestStepType.SCREENSHOT]: 'Screenshot',
-};
+import {StepIcons, StepLabels} from '../../../constants/stepTypeMetadata';
 
 /**
  * Props for the StepCard component
@@ -64,6 +29,7 @@ interface StepCardProps {
     onMoveStep?: (fromIndex: number, toIndex: number) => void;
     onMoveUp?: () => void;
     onMoveDown?: () => void;
+    status?: string; // Step status (RUNNING, PASSED, FAILED, etc.)
 }
 
 /**
@@ -125,8 +91,12 @@ const StepCard: React.FC<StepCardProps> = ({
                                                onCancel,
                                                onMoveStep,
                                                onMoveUp,
-                                               onMoveDown
+                                               onMoveDown,
+                                               status
                                            }) => {
+    // Create class name for step number with status
+    // Default to "pending" status if no status is provided
+    const stepNumberClass = `step-number ${status ? `status-${status}` : 'status-pending'}`;
     /**
      * Reference to the DOM element for drag and drop
      */
@@ -578,7 +548,7 @@ const StepCard: React.FC<StepCardProps> = ({
             data-handler-id={handlerId}
             className={`step-card ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
         >
-            <div className="step-number">{index + 1}</div>
+            <div className={stepNumberClass}>{index + 1}</div>
 
             <div className="step-content">
                 <div className="step-header">
@@ -677,6 +647,43 @@ const StepCard: React.FC<StepCardProps> = ({
             font-size: 12px;
             font-weight: 600;
             flex-shrink: 0;
+            transition: background-color 0.3s;
+          }
+          
+          /* Status-specific styles */
+          .step-number.status-running {
+            animation: blink-animation 1s infinite alternate;
+          }
+          
+          .step-number.status-passed {
+            background: #f3f4f6;
+            color: white;
+          }
+          
+          .step-number.status-passed {
+            background: #10b981;
+            color: white;
+          }
+          
+          .step-number.status-failed {
+            background: #ef4444;
+            color: white;
+          }
+          
+          .step-number.status-error {
+            background: #f59e0b;
+            color: white;
+          }
+          
+          .step-number.status-skipped {
+            background: #6b7280;
+            color: white;
+          }
+          
+          @keyframes blink-animation {
+            0% { background-color: #f3f4f6; }
+            50% { background-color: #e0e0e0; }
+            100% { background-color: #9ca3af; }
           }
           
           .step-content {

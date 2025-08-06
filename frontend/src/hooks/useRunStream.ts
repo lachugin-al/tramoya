@@ -89,6 +89,17 @@ export const useRunStream = (
     const [testResult, setTestResult] = useState<TestResult | null>(initialResult || null);
 
     /**
+     * Effect that resets testResult when runId changes to prevent state pollution
+     * from previous runs. This ensures each new run starts with a clean state.
+     */
+    useEffect(() => {
+        if (runId && testResult && testResult.id !== runId) {
+            console.log(`RunId changed from ${testResult.id} to ${runId}, resetting test result`);
+            setTestResult(null);
+        }
+    }, [runId, testResult]);
+
+    /**
      * Effect hook that ensures the test result has all required fields and logs changes.
      * This effect runs whenever the testResult state changes and performs validation and cleanup:
      * - Adds missing endTime for completed tests
@@ -99,6 +110,13 @@ export const useRunStream = (
         if (testResult) {
             let needsUpdate = false;
             let updatedFields: Record<string, any> = {};
+
+            // Synchronize id with runId if they don't match
+            if (testResult.id !== runId) {
+                updatedFields.id = runId;
+                needsUpdate = true;
+                console.log(`Synchronizing TestResult id from ${testResult.id} to ${runId}`);
+            }
 
             // Check if test has a final status but no endTime
             if ((testResult.status === TestStatus.PASSED ||
@@ -181,7 +199,7 @@ export const useRunStream = (
             console.log('Current steps:', testResult.stepResults.map(step =>
                 `${step.stepId}: ${step.status} (${step.screenshots.length} screenshots)`).join(', '));
         }
-    }, [testResult]);
+    }, [testResult, runId]);
 
     /**
      * State variable that indicates whether the SSE connection is being established.
@@ -279,26 +297,49 @@ export const useRunStream = (
                     console.log(`Processing step-start event for runId: ${data.runId}`);
 
                     setTestResult((prevResult) => {
-                        if (!prevResult) {
-                            return prevResult;
-                        }
+                        // Create base result skeleton if it doesn't exist yet
+                        const baseResult: TestResult = prevResult ?? {
+                            id: data.runId,
+                            testId: testId || data.runId,
+                            status: TestStatus.RUNNING,
+                            startTime: new Date(data.ts).toISOString(),
+                            endTime: undefined,
+                            stepResults: [],
+                            videoUrl: '',
+                            traceUrl: '',
+                        };
 
                         // Find the step result by stepId
-                        const updatedStepResults = [...prevResult.stepResults];
+                        const updatedStepResults = [...baseResult.stepResults];
                         const stepIndex = updatedStepResults.findIndex(
                             (step) => step.stepId === data.stepId
                         );
 
                         if (stepIndex !== -1) {
-                            // Update the step status to running
+                            // Update existing step status to running
                             updatedStepResults[stepIndex] = {
                                 ...updatedStepResults[stepIndex],
                                 status: StepStatus.RUNNING,
+                                startTime: new Date(data.ts).toISOString(),
                             };
+                            console.log(`Updated existing step ${data.stepId} to RUNNING`);
+                        } else {
+                            // Create new step if it doesn't exist
+                            updatedStepResults.push({
+                                stepId: data.stepId,
+                                status: StepStatus.RUNNING,
+                                screenshots: [],
+                                startTime: new Date(data.ts).toISOString(),
+                                endTime: undefined,
+                                logs: [],
+                                error: undefined,
+                            });
+                            console.log(`Created new step ${data.stepId} with RUNNING status`);
                         }
 
                         return {
-                            ...prevResult,
+                            ...baseResult,
+                            id: data.runId,
                             status: TestStatus.RUNNING,
                             stepResults: updatedStepResults,
                         };
@@ -398,6 +439,7 @@ export const useRunStream = (
                         /* 5. Create new state */
                         const result: TestResult = {
                             ...baseResult,
+                            id: data.runId,
                             stepResults: updatedStepResults,
                             // Ensure videoUrl and traceUrl are never undefined
                             videoUrl: baseResult.videoUrl || '',
@@ -464,6 +506,7 @@ export const useRunStream = (
 
                         return {
                             ...prevResult,
+                            id: data.runId,
                             stepResults: updatedStepResults,
                         };
                     });
@@ -509,6 +552,7 @@ export const useRunStream = (
 
                         return {
                             ...prevResult,
+                            id: data.runId,
                             status: data.status as TestStatus,
                             videoUrl: data.video,
                             traceUrl: data.trace,
@@ -544,7 +588,13 @@ export const useRunStream = (
                     }
 
                     console.log(`Processing test-result event for runId: ${data.runId || data.id}`);
-                    setTestResult(data);
+
+                    // Ensure the id field matches the current runId
+                    const resultData = {
+                        ...data,
+                        id: runId
+                    };
+                    setTestResult(resultData);
                 } catch (err) {
                     console.error('Error processing test-result event:', err);
                 }
@@ -641,6 +691,7 @@ export const useRunStream = (
 
                         return {
                             ...prevResult,
+                            id: data.runId,
                             stepResults: updatedStepResults,
                         };
                     });

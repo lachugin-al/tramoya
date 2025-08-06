@@ -7,6 +7,7 @@ import { QueueService } from '../../../src/services/queue-service';
 import testRoutes from '../../../src/routes/test-routes';
 import runRoutes from '../../../src/routes/run-routes';
 import streamRoutes from '../../../src/routes/stream-routes';
+import traceViewerRoutes from '../../../src/routes/trace-viewer-routes';
 
 // Mock dependencies
 jest.mock('../../../src/utils/logger', () => ({
@@ -21,6 +22,7 @@ jest.mock('../../../src/utils/logger', () => ({
 jest.mock('../../../src/routes/test-routes', () => jest.fn().mockReturnValue(express.Router()));
 jest.mock('../../../src/routes/run-routes', () => jest.fn().mockReturnValue(express.Router()));
 jest.mock('../../../src/routes/stream-routes', () => jest.fn().mockReturnValue(express.Router()));
+jest.mock('../../../src/routes/trace-viewer-routes', () => jest.fn().mockReturnValue(express.Router()));
 
 describe('Routes Index', () => {
   let app: Express;
@@ -80,6 +82,7 @@ describe('Routes Index', () => {
       expect(testRoutes).toHaveBeenCalledWith(mockMinioService, mockRedisService, mockQueueService);
       expect(runRoutes).toHaveBeenCalledWith(mockMinioService, mockRedisService, mockQueueService);
       expect(streamRoutes).toHaveBeenCalledWith(mockRedisService);
+      expect(traceViewerRoutes).toHaveBeenCalledWith(mockMinioService);
     });
 
     it('should register route handlers with the correct paths', () => {
@@ -93,6 +96,7 @@ describe('Routes Index', () => {
       expect(useSpy).toHaveBeenCalledWith('/api/v1/tests', expect.any(Function));
       expect(useSpy).toHaveBeenCalledWith('/api/v1/runs', expect.any(Function));
       expect(useSpy).toHaveBeenCalledWith('/api/v1/stream', expect.any(Function));
+      expect(useSpy).toHaveBeenCalledWith('/api/v1/trace-viewer', expect.any(Function));
     });
 
     it('should return route handlers for external access', () => {
@@ -103,7 +107,8 @@ describe('Routes Index', () => {
       expect(result).toEqual({
         testRoutes: expect.any(Function),
         runRoutes: expect.any(Function),
-        streamRoutes: expect.any(Function)
+        streamRoutes: expect.any(Function),
+        traceViewerRoutes: expect.any(Function)
       });
     });
   });

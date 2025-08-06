@@ -24,6 +24,7 @@ const logger = createLogger('minio-service');
 export class MinioService {
     private client: Minio.Client;
     private bucket: string;
+    private tempDir: string;
 
     constructor() {
         // Get configuration from environment variables
@@ -33,6 +34,7 @@ export class MinioService {
         const secretKey = process.env.MINIO_SECRET_KEY || 'minioadmin';
         const useSSL = process.env.MINIO_USE_SSL === 'true';
         this.bucket = process.env.MINIO_BUCKET || 'tramoya';
+        this.tempDir = process.env.TRACE_TEMP_DIR || '/tmp/tramoya-traces';
 
         // Initialize Minio client
         this.client = new Minio.Client({
@@ -42,6 +44,12 @@ export class MinioService {
             accessKey,
             secretKey
         });
+
+        // Ensure temp directory exists
+        if (!fs.existsSync(this.tempDir)) {
+            fs.mkdirSync(this.tempDir, { recursive: true });
+            logger.info(`Created temporary directory: ${this.tempDir}`);
+        }
 
         logger.info(`MinioService initialized with endpoint: ${endPoint}:${port}, bucket: ${this.bucket}`);
     }
@@ -222,8 +230,87 @@ export class MinioService {
                 return 'text/css';
             case '.js':
                 return 'application/javascript';
+            case '.zip':
+                return 'application/zip';
             default:
                 return 'application/octet-stream';
+        }
+    }
+
+    /**
+     * Downloads a trace file from Minio storage to a local temporary file
+     *
+     * @method downloadTraceFile
+     * @description Downloads an object from Minio storage to a local temporary file.
+     * This is used for trace files that need to be processed locally by the Playwright trace viewer.
+     * The file is stored in the configured temporary directory with a unique name.
+     *
+     * @param {string} objectName - Name of the object in Minio storage to download
+     * @returns {Promise<string>} A promise that resolves to the path of the downloaded temporary file
+     * @throws {Error} If the object doesn't exist or there's an error during download
+     */
+    public async downloadTraceFile(objectName: string): Promise<string> {
+        try {
+            logger.info(`Downloading trace file: ${objectName}`);
+
+            // Ensure the bucket exists
+            await this.ensureBucket();
+
+            // Generate a unique temporary file path
+            const tempFilePath = path.join(this.tempDir, `${Date.now()}-${path.basename(objectName)}`);
+
+            // Download the object
+            await this.client.fGetObject(
+                this.bucket,
+                objectName,
+                tempFilePath
+            );
+
+            logger.info(`Trace file downloaded to: ${tempFilePath}`);
+            return tempFilePath;
+        } catch (error) {
+            logger.error(`Error downloading trace file: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
+        }
+    }
+
+    /**
+     * Cleans up temporary files in the configured temporary directory
+     *
+     * @method cleanupTempFiles
+     * @description Removes files from the temporary directory that are older than the specified age.
+     * This helps prevent disk space issues from accumulating temporary files.
+     *
+     * @param {number} [maxAgeMs=3600000] - Maximum age of files to keep in milliseconds (default: 1 hour)
+     * @returns {Promise<number>} A promise that resolves to the number of files removed
+     */
+    public async cleanupTempFiles(maxAgeMs: number = 3600000): Promise<number> {
+        try {
+            logger.info(`Cleaning up temporary files older than ${maxAgeMs}ms`);
+
+            // Get all files in the temp directory
+            const files = fs.readdirSync(this.tempDir);
+            const now = Date.now();
+            let removedCount = 0;
+
+            // Check each file's age and remove if older than maxAgeMs
+            for (const file of files) {
+                const filePath = path.join(this.tempDir, file);
+                const stats = fs.statSync(filePath);
+
+                // Check if the file is older than maxAgeMs
+                if (now - stats.mtimeMs > maxAgeMs) {
+                    fs.unlinkSync(filePath);
+                    removedCount++;
+                    logger.debug(`Removed temporary file: ${filePath}`);
+                }
+            }
+
+            logger.info(`Cleaned up ${removedCount} temporary files`);
+            return removedCount;
+        } catch (error) {
+            logger.error(`Error cleaning up temporary files: ${error instanceof Error ? error.message : String(error)}`);
+            throw error;
         }
     }
 }

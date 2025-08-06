@@ -3,23 +3,7 @@ import {DndProvider} from 'react-dnd';
 import {HTML5Backend} from 'react-dnd-html5-backend';
 import {TestStep, TestStepType} from '../../../types';
 import StepCard from './StepCard';
-
-/**
- * Templates for available test step types that can be added to a test scenario
- * Each template includes an icon, label, and description for display in the UI
- *
- * @constant {Array<{type: TestStepType, icon: string, label: string, description: string}>}
- */
-const StepTemplates = [
-    {type: TestStepType.NAVIGATE, icon: '🌐', label: 'Navigate', description: 'Go to URL'},
-    {type: TestStepType.INPUT, icon: '⌨️', label: 'Type text', description: 'Enter text in field'},
-    {type: TestStepType.CLICK, icon: '🖱️', label: 'Click', description: 'Click element'},
-    {type: TestStepType.ASSERT_TEXT, icon: '📝', label: 'Assert text', description: 'Check text content'},
-    {type: TestStepType.ASSERT_VISIBLE, icon: '👁️', label: 'Assert visible', description: 'Check visibility'},
-    {type: TestStepType.WAIT, icon: '⏱️', label: 'Wait', description: 'Pause execution'},
-    {type: TestStepType.ASSERT_URL, icon: '🔗', label: 'Assert URL', description: 'Check current URL'},
-    {type: TestStepType.SCREENSHOT, icon: '📷', label: 'Screenshot', description: 'Take screenshot'},
-];
+import {StepTemplates} from '../../../constants/stepTypeMetadata';
 
 /**
  * Props for the StepsPanel component
@@ -41,6 +25,7 @@ interface StepsPanelProps {
     onAddStep: (stepType: TestStepType) => void;
     onUpdateStep: (index: number, step: TestStep) => void;
     editingStepIndex?: number;
+    stepStatuses?: Record<string, string>; // Map of step IDs to their statuses
 }
 
 /**
@@ -79,7 +64,8 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
                                                    onMoveStep,
                                                    onAddStep,
                                                    onUpdateStep,
-                                                   editingStepIndex
+                                                   editingStepIndex,
+                                                   stepStatuses = {}
                                                }) => {
     /**
      * State to control the visibility of the available steps dropdown
@@ -186,6 +172,7 @@ const StepsPanel: React.FC<StepsPanelProps> = ({
                                     onMoveStep={onMoveStep}
                                     onMoveUp={index > 0 ? () => onMoveStep(index, index - 1) : undefined}
                                     onMoveDown={index < steps.length - 1 ? () => onMoveStep(index, index + 1) : undefined}
+                                    status={stepStatuses[step.id]}
                                 />
                             ))}
                         </div>
