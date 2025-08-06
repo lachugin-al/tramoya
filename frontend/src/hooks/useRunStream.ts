@@ -316,11 +316,25 @@ export const useRunStream = (
                         );
 
                         if (stepIndex !== -1) {
-                            // Update the step status to running
+                            // Update existing step status to running
                             updatedStepResults[stepIndex] = {
                                 ...updatedStepResults[stepIndex],
                                 status: StepStatus.RUNNING,
+                                startTime: new Date(data.ts).toISOString(),
                             };
+                            console.log(`Updated existing step ${data.stepId} to RUNNING`);
+                        } else {
+                            // Create new step if it doesn't exist
+                            updatedStepResults.push({
+                                stepId: data.stepId,
+                                status: StepStatus.RUNNING,
+                                screenshots: [],
+                                startTime: new Date(data.ts).toISOString(),
+                                endTime: undefined,
+                                logs: [],
+                                error: undefined,
+                            });
+                            console.log(`Created new step ${data.stepId} with RUNNING status`);
                         }
 
                         return {
