@@ -183,7 +183,9 @@ const TestBuilder: React.FC = () => {
             // Update step statuses
             const newStepStatuses: Record<string, string> = {};
             testResult.stepResults.forEach(stepResult => {
-                newStepStatuses[stepResult.stepId] = stepResult.status;
+                // Ensure status is a string and convert to lowercase for CSS class compatibility
+                const status = stepResult.status ? stepResult.status.toString().toLowerCase() : '';
+                newStepStatuses[stepResult.stepId] = status;
             });
             setStepStatuses(newStepStatuses);
             
@@ -395,6 +397,13 @@ const TestBuilder: React.FC = () => {
             setTestStatus(TestStatus.RUNNING);
             setCurrentRunId(null); // Reset current run ID to close any existing SSE connection
             setCurrentStepIndex(0);
+            
+            // Reset step statuses to "pending" for all steps
+            const pendingStatuses: Record<string, string> = {};
+            test.steps.forEach(step => {
+                pendingStatuses[step.id] = 'pending';
+            });
+            setStepStatuses(pendingStatuses);
 
             // Execute test
             logger.debug(`Executing test: ${test.id}`);

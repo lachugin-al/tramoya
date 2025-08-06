@@ -91,8 +91,12 @@ const StepCard: React.FC<StepCardProps> = ({
                                                onCancel,
                                                onMoveStep,
                                                onMoveUp,
-                                               onMoveDown
+                                               onMoveDown,
+                                               status
                                            }) => {
+    // Create class name for step number with status
+    // Default to "pending" status if no status is provided
+    const stepNumberClass = `step-number ${status ? `status-${status}` : 'status-pending'}`;
     /**
      * Reference to the DOM element for drag and drop
      */
@@ -544,7 +548,7 @@ const StepCard: React.FC<StepCardProps> = ({
             data-handler-id={handlerId}
             className={`step-card ${isDragging ? 'dragging' : ''} ${isEditing ? 'editing' : ''}`}
         >
-            <div className="step-number">{index + 1}</div>
+            <div className={stepNumberClass}>{index + 1}</div>
 
             <div className="step-content">
                 <div className="step-header">
@@ -643,6 +647,43 @@ const StepCard: React.FC<StepCardProps> = ({
             font-size: 12px;
             font-weight: 600;
             flex-shrink: 0;
+            transition: background-color 0.3s;
+          }
+          
+          /* Status-specific styles */
+          .step-number.status-running {
+            animation: blink-animation 1s infinite alternate;
+          }
+          
+          .step-number.status-passed {
+            background: #f3f4f6;
+            color: white;
+          }
+          
+          .step-number.status-passed {
+            background: #10b981;
+            color: white;
+          }
+          
+          .step-number.status-failed {
+            background: #ef4444;
+            color: white;
+          }
+          
+          .step-number.status-error {
+            background: #f59e0b;
+            color: white;
+          }
+          
+          .step-number.status-skipped {
+            background: #6b7280;
+            color: white;
+          }
+          
+          @keyframes blink-animation {
+            0% { background-color: #f3f4f6; }
+            50% { background-color: #e0e0e0; }
+            100% { background-color: #9ca3af; }
           }
           
           .step-content {
