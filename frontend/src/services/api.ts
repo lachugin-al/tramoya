@@ -372,7 +372,7 @@ export const apiService = {
     async executeTest(id: string, workspaceId: string): Promise<{ resultId: string; result: TestResult }> {
         logger.info(`Executing test scenario: ${id}`, { workspaceId });
         try {
-            const response = await api.post(`/tests/${id}/execute`, { workspaceId });
+            const response = await api.post(`/tests/${id}/execute?workspaceId=${workspaceId}`);
             logger.info(`Test execution started: ${id}`, {
                 resultId: response.data.resultId,
                 status: response.data.result.status,
